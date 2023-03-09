@@ -58,7 +58,7 @@ std::string getFileContent(const TCHAR *file2read)
 	const size_t blockSize = 1024;
 	char data[blockSize];
 	std::string wholeFileContent = "";
-	FILE *fp = generic_fopen(file2read, TEXT("rb"));
+	FILE *fp = _wfopen(file2read, TEXT("rb"));
 
 	size_t lenFile = 0;
 	do
@@ -275,7 +275,7 @@ bool isInList(const TCHAR *token, const TCHAR *list)
 				word[j] = '\0';
 				j = 0;
 
-				if (!generic_stricmp(token, word))
+				if (!wcsicmp(token, word))
 					return true;
 			}
 		}
@@ -432,8 +432,9 @@ const wchar_t * WcharMbcsConvertor::char2wchar(const char * mbcs2Convert, size_t
 
 const char* WcharMbcsConvertor::wchar2char(const wchar_t * wcharStr2Convert, size_t codepage, int lenWc, int* pLenMbcs)
 {
-	if (nullptr == wcharStr2Convert)
+	if (!wcharStr2Convert)
 		return nullptr;
+
 	UINT cp = static_cast<UINT>(codepage);
 	int lenMbcs = WideCharToMultiByte(cp, 0, wcharStr2Convert, lenWc, NULL, 0, NULL, NULL);
 	if (lenMbcs > 0)
@@ -452,8 +453,9 @@ const char* WcharMbcsConvertor::wchar2char(const wchar_t * wcharStr2Convert, siz
 
 const char * WcharMbcsConvertor::wchar2char(const wchar_t * wcharStr2Convert, size_t codepage, intptr_t* mstart, intptr_t* mend)
 {
-	if (nullptr == wcharStr2Convert)
+	if (!wcharStr2Convert)
 		return nullptr;
+
 	UINT cp = static_cast<UINT>(codepage);
 	int len = WideCharToMultiByte(cp, 0, wcharStr2Convert, -1, NULL, 0, NULL, NULL);
 	if (len > 0)
@@ -720,7 +722,7 @@ COLORREF getCtrlBgColor(HWND hWnd)
 generic_string stringToUpper(generic_string strToConvert)
 {
     std::transform(strToConvert.begin(), strToConvert.end(), strToConvert.begin(), 
-        [](TCHAR ch){ return static_cast<TCHAR>(_totupper(ch)); }
+        [](wchar_t ch){ return static_cast<wchar_t>(towupper(ch)); }
     );
     return strToConvert;
 }
@@ -783,7 +785,7 @@ bool str2numberVector(generic_string str2convert, std::vector<size_t>& numVect)
 	}
 
 	std::vector<generic_string> v = stringSplit(str2convert, TEXT(" "));
-	for (auto i : v)
+	for (const auto& i : v)
 	{
 		// Don't treat empty string and the number greater than 9999
 		if (!i.empty() && i.length() < 5)
@@ -825,7 +827,7 @@ generic_string stringTakeWhileAdmissable(const generic_string& input, const gene
 }
 
 
-double stodLocale(const generic_string& str, _locale_t loc, size_t* idx)
+double stodLocale(const generic_string& str, [[maybe_unused]] _locale_t loc, size_t* idx)
 {
 	// Copied from the std::stod implementation but uses _wcstod_l instead of wcstod.
 	const wchar_t* ptr = str.c_str();
@@ -932,7 +934,7 @@ bool str2Clipboard(const generic_string &str2cpy, HWND hwnd)
 		::CloseClipboard();
 		return false;
 	}
-	_tcscpy_s(pStr, len2Allocate / sizeof(TCHAR), str2cpy.c_str());
+	wcscpy_s(pStr, len2Allocate / sizeof(TCHAR), str2cpy.c_str());
 	::GlobalUnlock(hglbCopy);
 	// Place the handle on the clipboard.
 	unsigned int clipBoardFormat = CF_UNICODETEXT;
@@ -1296,7 +1298,7 @@ bool isAssoCommandExisting(LPCTSTR FullPathName)
 std::wstring s2ws(const std::string& str)
 {
 	using convert_typeX = std::codecvt_utf8<wchar_t>;
-	std::wstring_convert<convert_typeX, wchar_t> converterX("Error in N++ string conversion s2ws!", L"Error in N++ string conversion s2ws!");
+	std::wstring_convert<convert_typeX, wchar_t> converterX("Error in Notepad++ string conversion s2ws!", L"Error in Notepad++ string conversion s2ws!");
 
 	return converterX.from_bytes(str);
 }
@@ -1304,7 +1306,7 @@ std::wstring s2ws(const std::string& str)
 std::string ws2s(const std::wstring& wstr)
 {
 	using convert_typeX = std::codecvt_utf8<wchar_t>;
-	std::wstring_convert<convert_typeX, wchar_t> converterX("Error in N++ string conversion ws2s!", L"Error in N++ string conversion ws2s!");
+	std::wstring_convert<convert_typeX, wchar_t> converterX("Error in Notepad++ string conversion ws2s!", L"Error in Notepad++ string conversion ws2s!");
 
 	return converterX.to_bytes(wstr);
 }
@@ -1510,7 +1512,7 @@ HFONT createFont(const TCHAR* fontName, int fontSize, bool isBold, HWND hDestPar
 	if (isBold)
 		logFont.lfWeight = FW_BOLD;
 
-	_tcscpy_s(logFont.lfFaceName, fontName);
+	wcscpy_s(logFont.lfFaceName, fontName);
 
 	HFONT newFont = CreateFontIndirect(&logFont);
 
@@ -1543,13 +1545,13 @@ bool isUnsupportedFileName(const generic_string& fileName)
 {
 	bool isUnsupported = true;
 
-	// until the N++ (and its plugins) will not be prepared for filenames longer than the MAX_PATH,
+	// until the Notepad++ (and its plugins) will not be prepared for filenames longer than the MAX_PATH,
 	// we have to limit also the maximum supported length below
 	if ((fileName.size() > 0) && (fileName.size() < MAX_PATH))
 	{
-		// possible raw filenames can contain space(s) or dot(s) at its end (e.g. "\\?\C:\file."), but the N++ advanced
+		// possible raw filenames can contain space(s) or dot(s) at its end (e.g. "\\?\C:\file."), but the Notepad++ advanced
 		// Open/SaveAs IFileOpenDialog/IFileSaveDialog COM-interface based dialogs currently do not handle this well
-		// (but e.g. direct N++ Ctrl+S works ok even with these filenames)
+		// (but e.g. direct Notepad++ Ctrl+S works ok even with these filenames)
 		if (!fileName.ends_with(_T('.')) && !fileName.ends_with(_T(' ')))
 		{
 			bool invalidASCIIChar = false;
@@ -1688,7 +1690,7 @@ void Version::setVersionFrom(const generic_string& filePath)
 			return;
 
 		unsigned char* buffer = new unsigned char[bufferSize];
-		::GetFileVersionInfo(filePath.c_str(), uselessArg, bufferSize, buffer);
+		::GetFileVersionInfo(filePath.c_str(), 0, bufferSize, buffer);
 
 		VS_FIXEDFILEINFO* lpFileInfo = nullptr;
 		UINT cbFileInfo = 0;

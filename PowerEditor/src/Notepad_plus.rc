@@ -435,6 +435,7 @@ BEGIN
         MENUITEM "&Delete",                          IDM_EDIT_DELETE
         MENUITEM "&Select All",                      IDM_EDIT_SELECTALL
         MENUITEM "Begin/End &Select",                IDM_EDIT_BEGINENDSELECT
+        MENUITEM "Begin/End Select in Column Mode",  IDM_EDIT_BEGINENDSELECT_COLUMNMODE
         MENUITEM SEPARATOR
         POPUP "Insert"
         BEGIN
@@ -524,7 +525,7 @@ BEGIN
             MENUITEM "Trim Leading Space",                 IDM_EDIT_TRIMLINEHEAD
             MENUITEM "Trim Leading and Trailing Space",    IDM_EDIT_TRIM_BOTH
             MENUITEM "EOL to Space",                       IDM_EDIT_EOL2WS
-            MENUITEM "Remove Unnecessary Blank and EOL",   IDM_EDIT_TRIMALL
+            MENUITEM "Trim both and EOL to Space",         IDM_EDIT_TRIMALL
             MENUITEM SEPARATOR
             MENUITEM "TAB to Space",                       IDM_EDIT_TAB2SW
             MENUITEM "Space to TAB (All)",                 IDM_EDIT_SW2TAB_ALL
@@ -642,7 +643,7 @@ BEGIN
             MENUITEM "Copy Bookmarked Lines",                  IDM_SEARCH_COPYMARKEDLINES
             MENUITEM "Paste to (Replace) Bookmarked Lines",    IDM_SEARCH_PASTEMARKEDLINES
             MENUITEM "Remove Bookmarked Lines",                IDM_SEARCH_DELETEMARKEDLINES
-            MENUITEM "Remove Unmarked Lines",                  IDM_SEARCH_DELETEUNMARKEDLINES
+            MENUITEM "Remove Non-Bookmarked Lines",            IDM_SEARCH_DELETEUNMARKEDLINES
             MENUITEM "Inverse Bookmark",                       IDM_SEARCH_INVERSEMARKS
         END
         MENUITEM SEPARATOR
@@ -667,12 +668,13 @@ BEGIN
         MENUITEM SEPARATOR
         POPUP "Show Symbol"
         BEGIN
-            MENUITEM "Show White Space and TAB",    IDM_VIEW_TAB_SPACE
-            MENUITEM "Show End of Line",            IDM_VIEW_EOL
-            MENUITEM "Show All Characters",         IDM_VIEW_ALL_CHARACTERS
+            MENUITEM "Show Space and Tab",              IDM_VIEW_TAB_SPACE
+            MENUITEM "Show End of Line",                IDM_VIEW_EOL
+            MENUITEM "Show Non-Printing Characters",    IDM_VIEW_NPC
+            MENUITEM "Show All Characters",             IDM_VIEW_ALL_CHARACTERS
             MENUITEM SEPARATOR
-            MENUITEM "Show Indent Guide",           IDM_VIEW_INDENT_GUIDE
-            MENUITEM "Show Wrap Symbol",            IDM_VIEW_WRAP_SYMBOL
+            MENUITEM "Show Indent Guide",               IDM_VIEW_INDENT_GUIDE
+            MENUITEM "Show Wrap Symbol",                IDM_VIEW_WRAP_SYMBOL
         END
         POPUP "Zoom"
         BEGIN
@@ -933,6 +935,7 @@ BEGIN
         MENUITEM "Java",                    IDM_LANG_JAVA
         MENUITEM "JavaScript",              IDM_LANG_JS
         MENUITEM "JSON",                    IDM_LANG_JSON
+        MENUITEM "JSON5",                   IDM_LANG_JSON5
         MENUITEM "JSP",                     IDM_LANG_JSP
         MENUITEM "KIXtart",                 IDM_LANG_KIX
         MENUITEM "LISP",                    IDM_LANG_LISP
@@ -1052,6 +1055,7 @@ BEGIN
         MENUITEM "Java",                  IDM_LANG_JAVA
         MENUITEM "JavaScript",            IDM_LANG_JS
         MENUITEM "JSON",                  IDM_LANG_JSON
+        MENUITEM "JSON5",                 IDM_LANG_JSON5
         MENUITEM "JSP",                   IDM_LANG_JSP
     END
     MENUITEM "KIXtart",                   IDM_LANG_KIX
@@ -1323,15 +1327,6 @@ BEGIN
     LTEXT           "0123456789",ID_LASTLINE,100,68,45,8,NOT WS_GROUP
     DEFPUSHBUTTON   "Go",IDOK,181,48,70,14,BS_NOTIFY
     PUSHBUTTON      "I'm going nowhere",IDCANCEL,181,66,70,14,BS_NOTIFY
-END
-
-IDD_VALUE_DLG DIALOGEX 0, 0, 74, 17
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-EXSTYLE WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE
-FONT 8, TEXT("MS Shell Dlg"), 0, 0, 0x1
-BEGIN
-    LTEXT             "STATIC :",IDC_VALUE_STATIC,6,4,45,8
-    EDITTEXT        IDC_VALUE_EDIT,49,3,18,11,ES_NUMBER
 END
 
 IDD_BUTTON_DLG DIALOGEX 0, 0, 12, 10

@@ -123,6 +123,7 @@ intptr_t CALLBACK AboutDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lPar
 				default :
 					break;
 			}
+			break;
 		}
 
 		case WM_DESTROY :
@@ -168,7 +169,11 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			_debugInfoStr += buildTime;
 			_debugInfoStr += TEXT("\r\n");
 
-#if defined(__GNUC__)
+#if defined(__clang__)
+			_debugInfoStr += TEXT("Built with : Clang ");
+			_debugInfoStr += wmc.char2wchar(__clang_version__, CP_ACP);
+			_debugInfoStr += TEXT("\r\n");
+#elif defined(__GNUC__)
 			_debugInfoStr += TEXT("Built with : GCC ");
 			_debugInfoStr += wmc.char2wchar(__VERSION__, CP_ACP);
 			_debugInfoStr += TEXT("\r\n");
@@ -210,11 +215,14 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			HKEY hKey;
 			DWORD dataSize = 0;
 
-			TCHAR szProductName[96] = {'\0'};
-			TCHAR szCurrentBuildNumber[32] = {'\0'};
+			constexpr size_t bufSize = 96;
+			TCHAR szProductName[bufSize] = {'\0'};
+			constexpr size_t bufSizeBuildNumber = 32;
+			TCHAR szCurrentBuildNumber[bufSizeBuildNumber] = {'\0'};
 			TCHAR szReleaseId[32] = {'\0'};
 			DWORD dwUBR = 0;
-			TCHAR szUBR[12] = TEXT("0");
+			constexpr size_t bufSizeUBR = 12;
+			TCHAR szUBR[bufSizeUBR] = TEXT("0");
 
 			// NOTE: RegQueryValueExW is not guaranteed to return null-terminated strings
 			if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"), 0, KEY_READ, &hKey) == ERROR_SUCCESS)
@@ -238,7 +246,7 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 				dataSize = sizeof(DWORD);
 				if (RegQueryValueExW(hKey, TEXT("UBR"), NULL, NULL, reinterpret_cast<LPBYTE>(&dwUBR), &dataSize) == ERROR_SUCCESS)
 				{
-					generic_sprintf(szUBR, TEXT("%u"), dwUBR);
+					swprintf(szUBR, bufSizeUBR, TEXT("%u"), dwUBR);
 				}
 
 				RegCloseKey(hKey);
@@ -247,19 +255,27 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			// Get alternative OS information
 			if (szProductName[0] == '\0')
 			{
-				generic_sprintf(szProductName, TEXT("%s"), (NppParameters::getInstance()).getWinVersionStr().c_str());
+				swprintf(szProductName, bufSize, TEXT("%s"), (NppParameters::getInstance()).getWinVersionStr().c_str());
 			}
-
-			// Override ProductName if it's Windows 11
-			if (NppDarkMode::isWindows11())
-				generic_sprintf(szProductName, TEXT("%s"), TEXT("Windows 11"));
+			else if (NppDarkMode::isWindows11())
+			{
+				generic_string tmpProductName = szProductName;
+				constexpr size_t strLen = 10U;
+				const TCHAR strWin10[strLen + 1U] = TEXT("Windows 10");
+				const size_t pos = tmpProductName.find(strWin10);
+				if (pos < (bufSize - strLen - 1U))
+				{
+					tmpProductName.replace(pos, strLen, TEXT("Windows 11"));
+					swprintf(szProductName, bufSize, TEXT("%s"), tmpProductName.c_str());
+				}
+			}
 
 			if (szCurrentBuildNumber[0] == '\0')
 			{
 				DWORD dwVersion = GetVersion();
 				if (dwVersion < 0x80000000)
 				{
-					generic_sprintf(szCurrentBuildNumber, TEXT("%u"), HIWORD(dwVersion));
+					swprintf(szCurrentBuildNumber, bufSizeBuildNumber, TEXT("%u"), HIWORD(dwVersion));
 				}
 			}
 
@@ -267,7 +283,7 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			_debugInfoStr += szProductName;
 			_debugInfoStr += TEXT(" (");
 			_debugInfoStr += (NppParameters::getInstance()).getWinVerBitStr();
-			_debugInfoStr += TEXT(") ");
+			_debugInfoStr += TEXT(")");
 			_debugInfoStr += TEXT("\r\n");
 
 			if (szReleaseId[0] != '\0')
@@ -287,8 +303,9 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			}
 
 			{
-				TCHAR szACP[32];
-				generic_sprintf(szACP, TEXT("%u"), ::GetACP());
+				constexpr size_t bufSizeACP = 32;
+				TCHAR szACP[bufSizeACP] = { '\0' };
+				swprintf(szACP, bufSizeACP, TEXT("%u"), ::GetACP());
 				_debugInfoStr += TEXT("Current ANSI codepage : ");
  				_debugInfoStr += szACP;
 				_debugInfoStr += TEXT("\r\n");
@@ -304,8 +321,9 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 
 			if (pWGV != nullptr)
 			{
-				TCHAR szWINEVersion[32];
-				generic_sprintf(szWINEVersion, TEXT("%hs"), pWGV());
+				constexpr size_t bufSizeWineVer = 32;
+				TCHAR szWINEVersion[bufSizeWineVer] = { '\0' };
+				swprintf(szWINEVersion, bufSizeWineVer, TEXT("%hs"), pWGV());
 
 				_debugInfoStr += TEXT("WINE : ");
 				_debugInfoStr += szWINEVersion;
@@ -373,6 +391,7 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 				default:
 					break;
 			}
+			break;
 		}
 
 		case WM_DESTROY:
@@ -521,6 +540,7 @@ intptr_t CALLBACK DoSaveOrNotBox::run_dlgProc(UINT message, WPARAM wParam, LPARA
 					return TRUE;
 				}
 			}
+			break;
 		}
 		default:
 			return FALSE;
@@ -627,6 +647,7 @@ intptr_t CALLBACK DoSaveAllBox::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 				return TRUE;
 			}
 		}
+		break;
 	}
 	default:
 		return FALSE;

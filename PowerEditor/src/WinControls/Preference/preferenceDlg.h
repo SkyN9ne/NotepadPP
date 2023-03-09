@@ -19,7 +19,6 @@
 
 #include "ControlsTab.h"
 #include "preference_rc.h"
-#include "URLCtrl.h"
 #include "Parameters.h"
 #include "regExtDlg.h"
 #include "WordStyleDlg.h"
@@ -45,11 +44,34 @@ private :
 
 class EditingSubDlg : public StaticDialog
 {
+friend class PreferenceDlg;
 public :
 	EditingSubDlg() = default;
+	~EditingSubDlg() {
+		if (_tip != nullptr)
+		{
+			::DestroyWindow(_tip);
+			_tip = nullptr;
+		}
+
+		for (auto& tip : _tips)
+		{
+			if (tip != nullptr)
+			{
+				::DestroyWindow(tip);
+				tip = nullptr;
+			}
+		}
+	};
 	
 private :
 	HWND _tip = nullptr;
+	HWND _tipNote = nullptr;
+	HWND _tipAbb = nullptr;
+	HWND _tipCodepoint = nullptr;
+	HWND _tipNpcColor = nullptr;
+
+	std::vector<HWND> _tips;
 
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
 	void initScintParam();
@@ -124,28 +146,18 @@ class RecentFilesHistorySubDlg : public StaticDialog
 {
 public :
 	RecentFilesHistorySubDlg() = default;
-	virtual void destroy() {
-		_nbHistoryVal.destroy();
-		_customLenVal.destroy();
-	};
 private :
-	URLCtrl _nbHistoryVal;
-	URLCtrl _customLenVal;
 	void setCustomLen(int val);
-	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 };
 
 class LanguageSubDlg : public StaticDialog
 {
 public :
 	LanguageSubDlg() = default;
-	virtual void destroy() {
-		_tabSizeVal.destroy();
-	};
 
 private :
-    LexerStylerArray _lsArray;
-	URLCtrl _tabSizeVal;
+	LexerStylerArray _lsArray;
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
 	std::vector<LangMenuItem> _langList;
 };
@@ -187,7 +199,8 @@ public :
 	BackupSubDlg() = default;
 
 private :
-	void updateBackupGUI();
+	void updateBackupSessionGUI();
+	void updateBackupOnSaveGUI();
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
 };
 
@@ -197,7 +210,6 @@ class AutoCompletionSubDlg : public StaticDialog
 public :
 	AutoCompletionSubDlg() = default;
 private :
-	URLCtrl _nbCharVal;
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
 };
 
@@ -213,6 +225,7 @@ private :
 
 class DelimiterSubDlg : public StaticDialog
 {
+friend class PreferenceDlg;
 public :
 	DelimiterSubDlg() = default;
 	~DelimiterSubDlg() {

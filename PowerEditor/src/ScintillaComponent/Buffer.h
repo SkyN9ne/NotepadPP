@@ -69,7 +69,7 @@ public:
 	size_t getNbDirtyBuffers() const;
 	int getBufferIndexByID(BufferID id);
 	Buffer * getBufferByIndex(size_t index);
-	Buffer * getBufferByID(BufferID id) {return static_cast<Buffer*>(id);}
+	Buffer * getBufferByID(BufferID id) {return id;}
 
 	void beNotifiedOfBufferChange(Buffer * theBuf, int mask);
 
@@ -320,6 +320,14 @@ public:
 	bool allowSmartHilite() const;
 	bool allowClickableLink() const;
 
+	void setDocColorId(int idx) {
+		_docColorId = idx;
+	};
+
+	int getDocColorId() {
+		return _docColorId;
+	};
+
 private:
 	int indexOfReference(const ScintillaEditView * identifier) const;
 
@@ -368,6 +376,8 @@ private:
 
 	long _recentTag = -1;
 	static long _recentTagCtr;
+
+	int _docColorId = -1;
 
 	// For backup system
 	generic_string _backupFileName;

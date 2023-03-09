@@ -37,9 +37,11 @@
 #define WINAPI_LAMBDA
 #endif
 
-#ifdef _MSC_VER
-#pragma comment(lib, "uxtheme.lib")
-#endif
+// already added in project files
+// keep for plugin authors
+//#ifdef _MSC_VER
+//#pragma comment(lib, "uxtheme.lib")
+//#endif
 
 constexpr COLORREF HEXRGB(DWORD rrggbb) {
 	// from 0xRRGGBB like natural #RRGGBB
@@ -567,7 +569,7 @@ namespace NppDarkMode
 		WORD l = 0;
 		ColorRGBToHLS(c, &h, &l, &s);
 
-		l = min(240 - l, 211);
+		l = std::min<WORD>(240U - l, 211U);
 
 		COLORREF invert_c = ColorHLSToRGB(h, l, s);
 
@@ -1742,12 +1744,25 @@ namespace NppDarkMode
 
 				auto holdBrush = ::SelectObject(hdc, NppDarkMode::getDarkerBackgroundBrush());
 
-				auto dpiManager = NppParameters::getInstance()._dpiManager;
+				auto& dpiManager = NppParameters::getInstance()._dpiManager;
 
-				RECT rcArrow = {
-				rc.right - dpiManager.scaleX(17), rc.top + 1,
-				rc.right - 1, rc.bottom - 1
-				};
+				RECT rcArrow{};
+
+				COMBOBOXINFO cbi{};
+				cbi.cbSize = sizeof(COMBOBOXINFO);
+				const bool resultCbi = ::GetComboBoxInfo(hWnd, &cbi) != FALSE;
+				if (resultCbi)
+				{
+					rcArrow = cbi.rcButton;
+					rcArrow.left -= 1;
+				}
+				else
+				{
+					rcArrow = {
+					rc.right - dpiManager.scaleX(17), rc.top + 1,
+					rc.right - 1, rc.bottom - 1
+					};
+				}
 
 				bool hasFocus = false;
 
@@ -1757,11 +1772,21 @@ namespace NppDarkMode
 				{
 					hasFocus = ::GetFocus() == hWnd;
 
-					RECT rcTextBg = rc;
-					rcTextBg.left += 1;
-					rcTextBg.top += 1;
-					rcTextBg.right = rcArrow.left - 1;
-					rcTextBg.bottom -= 1;
+					RECT rcTextBg{};
+					if (resultCbi)
+					{
+						rcTextBg = cbi.rcItem;
+					}
+					else
+					{
+						rcTextBg = rc;
+
+						rcTextBg.left += 1;
+						rcTextBg.top += 1;
+						rcTextBg.right = rcArrow.left - 1;
+						rcTextBg.bottom -= 1;
+					}
+
 					::FillRect(hdc, &rcTextBg, NppDarkMode::getBackgroundBrush()); // erase background on item change
 
 					auto index = static_cast<int>(::SendMessage(hWnd, CB_GETCURSEL, 0, 0));
@@ -1773,12 +1798,12 @@ namespace NppDarkMode
 						TCHAR* buffer = new TCHAR[(bufferLen + 1)];
 						::SendMessage(hWnd, CB_GETLBTEXT, index, reinterpret_cast<LPARAM>(buffer));
 
-						RECT rcText = rc;
+						RECT rcText = rcTextBg;
 						rcText.left += 4;
-						rcText.right = rcArrow.left - 5;
+						rcText.right -= 4;
 
 						::DrawText(hdc, buffer, -1, &rcText, DT_NOPREFIX | DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-						delete[]buffer;
+						delete[] buffer;
 					}
 				}
 				else if ((style & CBS_DROPDOWN) == CBS_DROPDOWN && hwndEdit != NULL)
@@ -1797,13 +1822,9 @@ namespace NppDarkMode
 				auto colorEnabledText = isHot ? NppDarkMode::getTextColor() : NppDarkMode::getDarkerTextColor();
 				::SetTextColor(hdc, isWindowEnabled ? colorEnabledText : NppDarkMode::getDisabledTextColor());
 				::SetBkColor(hdc, isHot ? NppDarkMode::getHotBackgroundColor() : NppDarkMode::getBackgroundColor());
-				::ExtTextOut(hdc,
-					rcArrow.left + (rcArrow.right - rcArrow.left) / 2 - dpiManager.scaleX(4),
-					rcArrow.top + 3,
-					ETO_OPAQUE | ETO_CLIPPED,
-					&rcArrow, L"˅",
-					1,
-					nullptr);
+				::FillRect(hdc, &rcArrow, isHot ? NppDarkMode::getHotBackgroundBrush() : NppDarkMode::getBackgroundBrush());
+				TCHAR arrow[] = L"˅";
+				::DrawText(hdc, arrow, -1, &rcArrow, DT_NOPREFIX | DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOCLIP);
 				::SetBkColor(hdc, NppDarkMode::getBackgroundColor());
 
 				auto hEnabledPen = (isHot || hasFocus) ? NppDarkMode::getHotEdgePen() : NppDarkMode::getEdgePen();
@@ -2424,17 +2445,30 @@ namespace NppDarkMode
 
 			case WM_CTLCOLOREDIT:
 			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
+				if (NppDarkMode::isEnabled())
+				{
+					return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
+				}
+				break;
 			}
 
 			case WM_CTLCOLORLISTBOX:
 			{
-				return NppDarkMode::onCtlColorListbox(wParam, lParam);
+				if (NppDarkMode::isEnabled())
+				{
+					return NppDarkMode::onCtlColorListbox(wParam, lParam);
+				}
+				break;
 			}
 
 			case WM_CTLCOLORDLG:
 			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
+
+				if (NppDarkMode::isEnabled())
+				{
+					return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
+				}
+				break;
 			}
 
 			case WM_CTLCOLORSTATIC:
@@ -3020,7 +3054,7 @@ namespace NppDarkMode
 	using IndividualTabColours = std::array<HLSColour, 5>;
 
 	static constexpr IndividualTabColours individualTabHuesFor_Dark  { { HLSColour{37, 60, 60}, HLSColour{70, 60, 60}, HLSColour{144, 70, 60}, HLSColour{255, 60, 60}, HLSColour{195, 60, 60} } };
-	static const IndividualTabColours individualTabHues              { { HLSColour{37, 210, 150}, HLSColour{70, 210, 150}, HLSColour{144, 210, 150}, HLSColour{255, 210, 150}, HLSColour{195, 210, 150}}};
+	static constexpr IndividualTabColours individualTabHues          { { HLSColour{37, 210, 150}, HLSColour{70, 210, 150}, HLSColour{144, 210, 150}, HLSColour{255, 210, 150}, HLSColour{195, 210, 150}}};
 
 
 	COLORREF getIndividualTabColour(int colourIndex, bool themeDependant, bool saturated)
@@ -3034,8 +3068,8 @@ namespace NppDarkMode
 
 			if (saturated)
 			{
-				result._lightness = 146;
-				result._saturation = min(240, result._saturation + 100);
+				result._lightness = 146U;
+				result._saturation = std::min<WORD>(240U, result._saturation + 100U);
 			}
 		}
 		else
@@ -3044,8 +3078,8 @@ namespace NppDarkMode
 
 			if (saturated)
 			{
-				result._lightness = 140;
-				result._saturation = min(240, result._saturation + 30);
+				result._lightness = 140U;
+				result._saturation = std::min<WORD>(240U, result._saturation + 30U);
 			}
 		}
 

@@ -1,4 +1,4 @@
-unit Test;
+unit unitTest;
 
 
 interface
@@ -7,12 +7,9 @@ uses
   System.SysUtils, System.Types, System.Classes;
 
 
-// ATTENTION!!! This is a known issue!
-// The following function should NOT be part of the function list tree.
-// However, it is still included because of the TYPE keyword after its declaration.
-// Global functions or procedures should therefor be declared immediately before
-// the keyword IMPLEMENTATION.
-function FreeFunc(const Param: integer): integer;
+{ Free function 1, declaration }
+
+function FreeFunc1(const Param: integer): integer;
 
 
 type
@@ -45,6 +42,7 @@ type
 
     class function Init(Cnt: integer): boolean;
     class function DeInit(Cnt: integer): boolean;
+    class function ToType<X: class, constructor>(const Value: string): X;
 
     procedure      SetValue(const Value: string);
 
@@ -68,21 +66,21 @@ type
 
   TGenericClass<T> = class(TObject)
   private type
-    TGenericInternalClass<T, I> = class(TObject)
+    TGenericInternalClass<I, K> = class(TObject)
     strict private
       FName:  string;
-      FId:    T;
-      FValue: I;
+      FId:    I;
+      FValue: K;
 
     public
       constructor Create;
       destructor  Destroy; override;
 
-      procedure   CopyTo<I>(Dest: TGenericInternalClass<T, I>);
+      procedure   CopyTo<J>(Dest: TGenericInternalClass<I, K>);
 
       property    Name:  string read FName  write FName;
-      property    Id:    T      read FId    write FId;
-      property    Value: I      read FValue write FValue;
+      property    Id:    I      read FId    write FId;
+      property    Value: K      read FValue write FValue;
     end;
 
   strict private
@@ -131,13 +129,26 @@ type
     class function FromString(const AString: string): TStdClass; static;
   end;
 
-  
+
 
 // -----------------------------------------------------------------------------
-// Free routines
+// Free routines declarations
 // -----------------------------------------------------------------------------
 
-function FreeFunc2(const Param: integer): integer;
+procedure FreeProc1(AParam: integer);
+
+function  FreeFunc2(const AParam: string): integer; inline;
+procedure FreeProc2(AParam: integer);
+
+{function  UnusedFreeFunc1(ANum: double): cardinal;}
+
+procedure FreeProc3(AParam: integer); overload; inline;
+procedure FreeProc3(AParam: string); overload; inline;
+
+(*
+function  UnusedFreeFunc2(ANum: double): cardinal;
+function  UnusedFreeFunc3(ANum: double): cardinal;
+*)
 
 
 
@@ -146,28 +157,125 @@ implementation
 {R *.dfm}
 
 
+type
+// -----------------------------------------------------------------------------
+// Internal classes
+// -----------------------------------------------------------------------------
+
+  TInternalClass = class(TObject)
+  public
+    function    Init(Cnt: integer): boolean;
+    procedure   SetValue(Cnt: integer);
+    
+  end;
+  
+
 // -----------------------------------------------------------------------------
 // Free routines
 // -----------------------------------------------------------------------------
 
-{ Free function 3 }
+{ Free function 3, forward declaration}
 
 function FreeFunc3(const Param: integer): integer; forward;
 
 
 
-{ Free function 1 }
+{ Free function 1, definition }
 
-function FreeFunc(const Param: integer): integer;
+function FreeFunc1(const Param: integer): integer;
+begin
+  //
+
+  Result := 0;
+end;
+
+
+
+{ Free procedure 1, definition }
+
+procedure FreeProc1(AParam: integer);
+begin
+  // Do something
+end;
+
+
+
+{ Free function 2, definition }
+
+function FreeFunc2(const AParam: string): integer;
+begin
+  // Do something
+
+  Result := 0;
+end;
+
+
+
+
+{
+// Unused free function 1, definition
+
+function UnusedFreeFunc1(ANum: double): cardinal;
+begin
+  // Do something
+
+  Result := 0;
+end;
+}
+
+
+
+{ Free procedure 2, definition }
+procedure FreeProc2(AParam: integer);
+begin
+  // Do something
+end;
+
+
+
+(*
+// Unused free function 2, definition
+
+function UnusedFreeFunc2(ANum: double): cardinal;
+begin
+  // Do something
+
+  Result := 0;
+end;
+
+
+
+{ Unused free function 3, definition }
+
+function UnusedFreeFunc3(ANum: double): cardinal;
+begin
+  // Do something
+
+  Result := 0;
+end;
+*)
+
+
+
+{ Free procedure 3 (overloaded), definition }
+
+procedure FreeProc3(AParam: integer);
 begin
   //
 end;
 
 
 
-{ Free function 4 }
+procedure FreeProc3(AParam: string);
+begin
+  //
+end;
 
-procedure FreeFunc4(const Param: integer); forward;
+
+
+{ Free procedure 4, forward declaration}
+
+procedure FreeProc4(const Param: integer); forward;
 
 
 
@@ -194,12 +302,20 @@ end;
 class function TStdClass.Init(Cnt: integer): boolean;
 begin
   FInstCnt := Cnt;
+  Result   := true;
 end;
 
 
 class function TStdClass.DeInit(Cnt: integer): boolean;
 begin
   FInstCnt := Cnt;
+  Result   := true;
+end;
+
+
+class function TStdClass.ToType<X>(const Value: string): X;
+begin
+  Result := X.Create;
 end;
 
 
@@ -249,12 +365,46 @@ end;
 // Free routines
 // -----------------------------------------------------------------------------
 
-{ Free function 2 with internal function preceeded by a comment }
+{ Free function 3 with internal procedure, definition }
 
-function FreeFunc2(const Param: integer): integer;
+function FreeFunc3(const Param: integer): integer;
+
+  procedure InternalProc1(const Param: integer);
+  begin
+    //
+  end;
+
+begin
+  //
+
+  Result := 0;
+end;
+
+
+
+{ Free procedure 4 with internal function, definition }
+
+procedure FreeProc4(const Param: integer);
+
+  function InternalFunc1(const Param: integer): string;
+  begin
+    //
+
+    Result := '';
+  end;
+
+begin
+  //
+end;
+
+
+
+{ Free procedure 5 with internal procedure preceeded by a comment, declaration & definition }
+
+procedure FreeProc5;
 
   // Internal routine
-  function FreeFunc2Internal: integer;
+  procedure InternalProc2;
   begin
     //
   end;
@@ -265,46 +415,9 @@ end;
 
 
 
-{ Free function 3 with internal procedure }
+{ Free procedure 6 (inline), declaration & definition }
 
-function FreeFunc3: integer;
-
-  procedure FreeFunc3Internal(const Param: integer);
-  begin
-    //
-  end;
-
-begin
-  //
-end;
-
-
-
-{ Free procedure 4 with internal function }
-
-procedure FreeFunc4;
-
-  function FreeFunc4Internal(const Param: integer): string;
-  begin
-    //
-  end;
-
-begin
-  //
-end;
-
-
-
-{ Free procedure 5 with internal procedure preceeded by a comment }
-
-procedure FreeFunc5;
-
-  // Internal routine
-  procedure FreeFunc5Internal;
-  begin
-    //
-  end;
-
+procedure FreeProc6; inline;
 begin
   //
 end;
@@ -333,23 +446,9 @@ end;
 
 // This is a class function
 class function TGenericClass<T>.Init<I>(Cnt: integer): boolean;
-
-  // ---------------------------------------------------------------------------
-  // This is an inline function with surrounding comments
-  function InitStdInternalClass: integer;
-  begin
-    //
-  end;
-  // ---------------------------------------------------------------------------
-
-  function ReInitStdInternalClass: integer;
-  begin
-    // This is an inline function without surrounding comments
-  end;
-
-// This is the main function's body
 begin
   FInstCnt := Cnt;
+  Result   := true;
 end;
 
 
@@ -357,6 +456,7 @@ end;
 class function TGenericClass<T>.DeInit(Cnt: integer): boolean;
 begin
   FInstCnt := Cnt;
+  Result   := true;
 end;
 
 
@@ -368,20 +468,20 @@ end;
 
 
 // -----------------------------------------------------------------------------
-// TGenericClass<T>.TGenericInternalClass<T, I>
+// TGenericClass<T>.TGenericInternalClass<I, K>
 // -----------------------------------------------------------------------------
 
-constructor TGenericClass<T>.TGenericInternalClass<T, I>.Create;
+constructor TGenericClass<T>.TGenericInternalClass<I, K>.Create;
 begin
   inherited;
 
-  FValue := '';
-  FId    := Default(T);
-  FName  := Default(I);
+  FName  := '';
+  FId    := Default(I);
+  FValue := Default(K);
 end;
 
 
-destructor TGenericClass<T>.TGenericInternalClass<T, I>.Destroy;
+destructor TGenericClass<T>.TGenericInternalClass<I, K>.Destroy;
 begin
   //
 
@@ -389,11 +489,28 @@ begin
 end;
 
 
-procedure TGenericClass<T>.TGenericInternalClass<T, I>.CopyTo<I>(Dest: TGenericInternalClass<T, I>);
+procedure TGenericClass<T>.TGenericInternalClass<I, K>.CopyTo<J>(Dest: TGenericInternalClass<I, K>);
 begin
   Dest.Name  := Name;
   Dest.Id    := Id;
   Dest.Value := Value;
+end;
+
+
+
+// -----------------------------------------------------------------------------
+// TInternalClass
+// -----------------------------------------------------------------------------
+
+function TInternalClass.Init(Cnt: integer): boolean;
+begin
+  Result := true;
+end;
+
+
+procedure TInternalClass.SetValue(Cnt: integer);
+begin
+  //
 end;
 
 
@@ -416,10 +533,10 @@ class function TEnumHelper.FromString(const AString: string): TEnum;
 begin
   if SameText(AString, 'Member 2') then
     Result := enMember2
-    
-  if SameText(AString, 'Member 3') then
+
+  else if SameText(AString, 'Member 3') then
     Result := enMember3
-    
+
   else
     Result := enMember1;
 end;

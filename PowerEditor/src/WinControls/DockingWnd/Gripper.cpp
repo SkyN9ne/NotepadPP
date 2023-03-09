@@ -130,7 +130,7 @@ LRESULT CALLBACK Gripper::staticWinProc(HWND hwnd, UINT message, WPARAM wParam, 
 	switch (message)
 	{
 		case WM_NCCREATE :
-			pDlgMoving = reinterpret_cast<Gripper *>(reinterpret_cast<LPCREATESTRUCT>(lParam)->lpCreateParams);
+			pDlgMoving = static_cast<Gripper *>(reinterpret_cast<LPCREATESTRUCT>(lParam)->lpCreateParams);
 			pDlgMoving->_hSelf = hwnd;
 			::SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pDlgMoving));
 			return TRUE;
@@ -443,7 +443,7 @@ void Gripper::doTabReordering(POINT pt)
 			auto iSel = ::SendMessage(_hTab, TCM_GETCURSEL, 0, 0);
 			::SendMessage(_hTab, TCM_DELETEITEM, iSel, 0);
 		}
-		else if (_hTab == hTabOld)
+		else if (_hTab && _hTab == hTabOld)
 		{
 			// delete item on switch between tabs
 			::SendMessage(_hTab, TCM_DELETEITEM, iItemOld, 0);
@@ -561,10 +561,10 @@ void Gripper::drawRectangle(const POINT* pPt)
 			if (rcOld.left==rcNew.left && rcOld.right==rcNew.right && rcOld.top== rcNew.top && rcOld.bottom==rcNew.bottom)
 				return;
 
-			rc.left   = min(rcOld.left, rcNew.left);
-			rc.top    = min(rcOld.top,  rcNew.top);
-			rc.right  = max(rcOld.left + rcOld.right,  rcNew.left + rcNew.right);
-			rc.bottom = max(rcOld.top  + rcOld.bottom, rcNew.top  + rcNew.bottom);
+			rc.left   = std::min<LONG>(rcOld.left, rcNew.left);
+			rc.top    = std::min<LONG>(rcOld.top,  rcNew.top);
+			rc.right  = std::max<LONG>(rcOld.left + rcOld.right,  rcNew.left + rcNew.right);
+			rc.bottom = std::max<LONG>(rcOld.top  + rcOld.bottom, rcNew.top  + rcNew.bottom);
 			rc.right -= rc.left;
 			rc.bottom-= rc.top;
 		}

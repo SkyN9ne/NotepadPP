@@ -28,6 +28,7 @@
 #define FIND_INHIDDENDIR 2
 
 #define FINDREPLACE_MAXLENGTH 2048
+#define FINDREPLACE_INSEL_TEXTSIZE_THRESHOLD 1024
 
 #define FINDTEMPSTRING_MAXSIZE 1024*1024
 
@@ -125,6 +126,7 @@ public:
 	void addSearchHitCount(int count, int countSearched, bool isMatchLines, bool searchedEntireNotSelection);
 	const char* foundLine(FoundInfo fi, SearchResultMarkingLine mi, const TCHAR* foundline, size_t totalLineNumber);
 	void setFinderStyle();
+	void setFinderStyleForNpc(bool onlyColor = false);
 	void removeAll();
 	void openAll();
 	void wrapLongLinesToggle();
@@ -152,7 +154,7 @@ private:
 	enum CurrentPosInLineStatus { pos_infront, pos_between, pos_inside, pos_behind };
 
 	struct CurrentPosInLineInfo {
-		CurrentPosInLineStatus _status;
+		CurrentPosInLineStatus _status = pos_infront;
 		intptr_t auxiliaryInfo = -1; // according the status
 	};
 
@@ -352,6 +354,29 @@ public :
 		if (_pFinder && _pFinder->isCreated())
 		{
 			_pFinder->setFinderStyle();
+
+			if (!_findersOfFinder.empty())
+			{
+				for (const auto& finder : _findersOfFinder)
+				{
+					finder->setFinderStyle();
+				}
+			}
+		}
+	};
+
+	void updateFinderScintillaForNpc(bool onlyColor = false) {
+		if (_pFinder && _pFinder->isCreated())
+		{
+			_pFinder->setFinderStyleForNpc(onlyColor);
+
+			if (!_findersOfFinder.empty())
+			{
+				for (const auto& finder : _findersOfFinder)
+				{
+					finder->setFinderStyleForNpc();
+				}
+			}
 		}
 	};
 

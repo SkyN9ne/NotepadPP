@@ -95,9 +95,12 @@ void Notepad_plus::command(int id)
 				dateTimeStr += TEXT(" ");
 				dateTimeStr += dateStr;
 			}
+			_pEditView->execute(SCI_BEGINUNDOACTION);
 
 			_pEditView->execute(SCI_REPLACESEL, 0, reinterpret_cast<LPARAM>(""));
 			_pEditView->addGenericText(dateTimeStr.c_str());
+
+			_pEditView->execute(SCI_ENDUNDOACTION);
 		}
 		break;
 
@@ -109,8 +112,12 @@ void Notepad_plus::command(int id)
 			NppGUI& nppGUI = NppParameters::getInstance().getNppGUI();
 			generic_string dateTimeStr = getDateTimeStrFrom(nppGUI._dateTimeFormat, currentTime);
 
+			_pEditView->execute(SCI_BEGINUNDOACTION);
+
 			_pEditView->execute(SCI_REPLACESEL, 0, reinterpret_cast<LPARAM>(""));
 			_pEditView->addGenericText(dateTimeStr.c_str());
+
+			_pEditView->execute(SCI_ENDUNDOACTION);
 		}
 		break;
 
@@ -366,8 +373,8 @@ void Notepad_plus::command(int id)
 				_pEditView->execute(WM_COPY);
 				checkClipboard();
 				_pEditView->execute(SCI_SETSEL, curPos, curPos);
-				break;
 			}
+			break;
 		}
 
 		case IDM_EDIT_COPY_BINARY:
@@ -623,9 +630,13 @@ void Notepad_plus::command(int id)
 		break;
 
 		case IDM_EDIT_BEGINENDSELECT:
+		case IDM_EDIT_BEGINENDSELECT_COLUMNMODE:
 		{
-			::CheckMenuItem(_mainMenuHandle, IDM_EDIT_BEGINENDSELECT, MF_BYCOMMAND | (_pEditView->beginEndSelectedIsStarted() ? MF_UNCHECKED : MF_CHECKED));
-			_pEditView->beginOrEndSelect();
+			_pEditView->beginOrEndSelect(id == IDM_EDIT_BEGINENDSELECT_COLUMNMODE);
+			bool isStarted = _pEditView->beginEndSelectedIsStarted();
+			::CheckMenuItem(_mainMenuHandle, id, MF_BYCOMMAND | (isStarted ? MF_CHECKED : MF_UNCHECKED));
+			int otherId = (id == IDM_EDIT_BEGINENDSELECT) ? IDM_EDIT_BEGINENDSELECT_COLUMNMODE : IDM_EDIT_BEGINENDSELECT;
+			::EnableMenuItem(_mainMenuHandle, otherId, MF_BYCOMMAND | (isStarted ? (MF_DISABLED | MF_GRAYED) : MF_ENABLED));
 		}
 		break;
 
@@ -656,12 +667,12 @@ void Notepad_plus::command(int id)
 					size_t rectSelCaret = _pEditView->execute(SCI_GETRECTANGULARSELECTIONCARET);
 					size_t anchorLine = _pEditView->execute(SCI_LINEFROMPOSITION, rectSelAnchor);
 					size_t caretLine = _pEditView->execute(SCI_LINEFROMPOSITION, rectSelCaret);
-					fromLine = min(anchorLine, caretLine);
-					toLine = max(anchorLine, caretLine);
+					fromLine = std::min<size_t>(anchorLine, caretLine);
+					toLine = std::max<size_t>(anchorLine, caretLine);
 					size_t anchorLineOffset = rectSelAnchor - _pEditView->execute(SCI_POSITIONFROMLINE, anchorLine) + _pEditView->execute(SCI_GETRECTANGULARSELECTIONANCHORVIRTUALSPACE);
 					size_t caretLineOffset = rectSelCaret - _pEditView->execute(SCI_POSITIONFROMLINE, caretLine) + _pEditView->execute(SCI_GETRECTANGULARSELECTIONCARETVIRTUALSPACE);
-					fromColumn = min(anchorLineOffset, caretLineOffset);
-					toColumn = max(anchorLineOffset, caretLineOffset);
+					fromColumn = std::min<size_t>(anchorLineOffset, caretLineOffset);
+					toColumn = std::max<size_t>(anchorLineOffset, caretLineOffset);
 				}
 				else
 				{
@@ -988,7 +999,12 @@ void Notepad_plus::command(int id)
 			const auto current_index = _pDocTab->getCurrentTabIndex();
 			BufferID buffer_id = _pDocTab->getBufferByIndex(current_index);
 			_pDocTab->setIndividualTabColour(buffer_id, color_id);
-			::SendMessage(_pPublicInterface->getHSelf(), WM_SIZE, 0, 0);
+			_pDocTab->redraw();
+
+			if (_pDocumentListPanel != nullptr)
+			{
+				_pDocumentListPanel->setItemColor(buffer_id);
+			}
 		}
 		break;
 
@@ -1233,7 +1249,10 @@ void Notepad_plus::command(int id)
 			if (nppGui._fillFindFieldWithSelected)
 			{
 				_pEditView->getGenericSelectedText(str, strSize, nppGui._fillFindFieldSelectCaret);
-				_findReplaceDlg.setSearchText(str);
+				if (lstrlen(str) <= FINDREPLACE_INSEL_TEXTSIZE_THRESHOLD)
+				{
+					_findReplaceDlg.setSearchText(str);
+				}
 			}
 
 			setFindReplaceFolderFilter(NULL, NULL);
@@ -1319,6 +1338,7 @@ void Notepad_plus::command(int id)
 				_nativeLangSpeaker.changeFindReplaceDlgLang(_findReplaceDlg);
 
 			FindOption op = _findReplaceDlg.getCurrentOptions();
+			op._searchType = FindNormal;
 			op._whichDirection = (id == IDM_SEARCH_SETANDFINDNEXT?DIR_DOWN:DIR_UP);
 
 			FindStatus status = FSNoMessage;
@@ -1361,15 +1381,19 @@ void Notepad_plus::command(int id)
 		case IDM_SEARCH_VOLATILE_FINDNEXT :
 		case IDM_SEARCH_VOLATILE_FINDPREV :
 		{
-			TCHAR text2Find[MAX_PATH] = { '\0' };
-			_pEditView->getGenericSelectedText(text2Find, MAX_PATH);
+			const int strSize = FINDREPLACE_MAXLENGTH;
+			TCHAR str[strSize] = { '\0' };
+			_pEditView->getGenericSelectedText(str, strSize);
 
 			FindOption op;
+			op._isMatchCase = false;
 			op._isWholeWord = false;
-			op._whichDirection = (id == IDM_SEARCH_VOLATILE_FINDNEXT?DIR_DOWN:DIR_UP);
+			op._isWrapAround = true;
+			op._searchType = FindNormal;
+			op._whichDirection = (id == IDM_SEARCH_VOLATILE_FINDNEXT ? DIR_DOWN : DIR_UP);
 
 			FindStatus status = FSNoMessage;
-			_findReplaceDlg.processFindNext(text2Find, &op, &status);
+			_findReplaceDlg.processFindNext(str, &op, &status);
 			if (status == FSEndReached)
 			{
 				generic_string msg = _nativeLangSpeaker.getLocalizedStrFromID("find-status-end-reached", TEXT("Find: Found the 1st occurrence from the top. The end of the document has been reached."));
@@ -1595,7 +1619,14 @@ void Notepad_plus::command(int id)
 		{
 			_nativeLangSpeaker.messageBox("ColumnModeTip",
 					_pPublicInterface->getHSelf(),
-					TEXT("Please use \"ALT+Mouse Selection\" or \"Alt+Shift+Arrow key\" to switch to column mode."),
+					TEXT("There are 3 ways to switch to column-select mode:\r\n\r\n")
+					TEXT("1. (Keyboard and Mouse)  Hold Alt while left-click dragging\r\n\r\n")
+					TEXT("2. (Keyboard only)  Hold Alt+Shift while using arrow keys\r\n\r\n")
+					TEXT("3. (Keyboard or Mouse)\r\n")
+					TEXT("      Put caret at desired start of column block position, then\r\n")
+					TEXT("       execute \"Begin/End Select in Column Mode\" command;\r\n")
+					TEXT("      Move caret to desired end of column block position, then\r\n")
+					TEXT("       execute \"Begin/End Select in Column Mode\" command again\r\n"),
 					TEXT("Column Mode Tip"),
 					MB_OK|MB_APPLMODAL);
 		}
@@ -1622,7 +1653,7 @@ void Notepad_plus::command(int id)
 				if (id == IDM_SEARCH_GOTOMATCHINGBRACE)
 					_pEditView->execute(SCI_GOTOPOS, braceOpposite);
 				else
-					_pEditView->execute(SCI_SETSEL, min(braceAtCaret, braceOpposite), max(braceAtCaret, braceOpposite) + 1); // + 1 so we always include the ending brace in the selection.
+					_pEditView->execute(SCI_SETSEL, std::min<intptr_t>(braceAtCaret, braceOpposite), std::max<intptr_t>(braceAtCaret, braceOpposite) + 1); // + 1 so we always include the ending brace in the selection.
 			}
 		}
 		break;
@@ -1909,8 +1940,7 @@ void Notepad_plus::command(int id)
 
 		case IDM_EDIT_EOL2WS:
 			_pEditView->execute(SCI_BEGINUNDOACTION);
-			_pEditView->execute(SCI_TARGETWHOLEDOCUMENT);
-			_pEditView->execute(SCI_LINESJOIN);
+			eol2ws();
 			_pEditView->execute(SCI_ENDUNDOACTION);
 			break;
 
@@ -1919,9 +1949,10 @@ void Notepad_plus::command(int id)
 			std::lock_guard<std::mutex> lock(command_mutex);
 
 			_pEditView->execute(SCI_BEGINUNDOACTION);
+			bool isEntireDoc = _pEditView->execute(SCI_GETANCHOR) == _pEditView->execute(SCI_GETCURRENTPOS);
 			doTrim(lineBoth);
-			_pEditView->execute(SCI_TARGETWHOLEDOCUMENT);
-			_pEditView->execute(SCI_LINESJOIN);
+			if (isEntireDoc || _pEditView->execute(SCI_GETANCHOR) != _pEditView->execute(SCI_GETCURRENTPOS))
+				eol2ws();
 			_pEditView->execute(SCI_ENDUNDOACTION);
 			break;
 		}
@@ -2281,51 +2312,99 @@ void Notepad_plus::command(int id)
 
 		case IDM_VIEW_TAB_SPACE:
 		{
-			bool isChecked = !(::GetMenuState(_mainMenuHandle, IDM_VIEW_TAB_SPACE, MF_BYCOMMAND) == MF_CHECKED);
-			::CheckMenuItem(_mainMenuHandle, IDM_VIEW_EOL, MF_BYCOMMAND | MF_UNCHECKED);
-			::CheckMenuItem(_mainMenuHandle, IDM_VIEW_ALL_CHARACTERS, MF_BYCOMMAND | MF_UNCHECKED);
-			::CheckMenuItem(_mainMenuHandle, IDM_VIEW_TAB_SPACE, MF_BYCOMMAND | (isChecked?MF_CHECKED:MF_UNCHECKED));
-			_toolBar.setCheck(IDM_VIEW_ALL_CHARACTERS, false);
-			_mainEditView.showEOL(false);
+			auto setCheckMenuItem = [this](int id, bool check) -> DWORD {
+				return ::CheckMenuItem(_mainMenuHandle, id, MF_BYCOMMAND | (check ? MF_CHECKED : MF_UNCHECKED));
+			};
+
+			const bool isChecked = !(::GetMenuState(_mainMenuHandle, id, MF_BYCOMMAND) == MF_CHECKED);
+			setCheckMenuItem(id, isChecked);
+
 			_mainEditView.showWSAndTab(isChecked);
-			_subEditView.showEOL(false);
 			_subEditView.showWSAndTab(isChecked);
 
-            ScintillaViewParams & svp1 = (ScintillaViewParams &)(NppParameters::getInstance()).getSVP();
-            svp1._whiteSpaceShow = isChecked;
-            svp1._eolShow = false;
+			auto& svp1 = const_cast<ScintillaViewParams&>(NppParameters::getInstance().getSVP());
+			svp1._whiteSpaceShow = isChecked;
+
+			const bool allChecked = svp1._whiteSpaceShow && svp1._eolShow && svp1._npcShow;
+
+			setCheckMenuItem(IDM_VIEW_ALL_CHARACTERS, allChecked);
+			_toolBar.setCheck(IDM_VIEW_ALL_CHARACTERS, allChecked);
+
 			break;
 		}
+
 		case IDM_VIEW_EOL:
 		{
-			bool isChecked = !(::GetMenuState(_mainMenuHandle, IDM_VIEW_EOL, MF_BYCOMMAND) == MF_CHECKED);
-			::CheckMenuItem(_mainMenuHandle, IDM_VIEW_TAB_SPACE, MF_BYCOMMAND | MF_UNCHECKED);
-			::CheckMenuItem(_mainMenuHandle, IDM_VIEW_EOL, MF_BYCOMMAND | (isChecked?MF_CHECKED:MF_UNCHECKED));
-			::CheckMenuItem(_mainMenuHandle, IDM_VIEW_ALL_CHARACTERS, MF_BYCOMMAND | MF_UNCHECKED);
-			_toolBar.setCheck(IDM_VIEW_ALL_CHARACTERS, false);
+			auto setCheckMenuItem = [this](int id, bool check) -> DWORD {
+				return ::CheckMenuItem(_mainMenuHandle, id, MF_BYCOMMAND | (check ? MF_CHECKED : MF_UNCHECKED));
+			};
+
+			const bool isChecked = !(::GetMenuState(_mainMenuHandle, id, MF_BYCOMMAND) == MF_CHECKED);
+			setCheckMenuItem(id, isChecked);
+
 			_mainEditView.showEOL(isChecked);
 			_subEditView.showEOL(isChecked);
-			_mainEditView.showWSAndTab(false);
-			_subEditView.showWSAndTab(false);
 
-            ScintillaViewParams & svp1 = (ScintillaViewParams &)(NppParameters::getInstance()).getSVP();
-            svp1._whiteSpaceShow = false;
-            svp1._eolShow = isChecked;
+			auto& svp1 = const_cast<ScintillaViewParams&>(NppParameters::getInstance().getSVP());
+			svp1._eolShow = isChecked;
+
+			const bool allChecked = svp1._whiteSpaceShow && svp1._eolShow && svp1._npcShow;
+
+			setCheckMenuItem(IDM_VIEW_ALL_CHARACTERS, allChecked);
+			_toolBar.setCheck(IDM_VIEW_ALL_CHARACTERS, allChecked);
+
 			break;
 		}
+
+		case IDM_VIEW_NPC:
+		{
+			auto setCheckMenuItem = [this](int id, bool check) -> DWORD {
+				return ::CheckMenuItem(_mainMenuHandle, id, MF_BYCOMMAND | (check ? MF_CHECKED : MF_UNCHECKED));
+			};
+
+			const bool isChecked = !(::GetMenuState(_mainMenuHandle, id, MF_BYCOMMAND) == MF_CHECKED);
+			setCheckMenuItem(id, isChecked);
+
+			_mainEditView.showNpc(isChecked);
+			_subEditView.showNpc(isChecked);
+
+			auto& svp1 = const_cast<ScintillaViewParams&>(NppParameters::getInstance().getSVP());
+			svp1._npcShow = isChecked;
+
+			const bool allChecked = svp1._whiteSpaceShow && svp1._eolShow && svp1._npcShow;
+
+			setCheckMenuItem(IDM_VIEW_ALL_CHARACTERS, allChecked);
+			_toolBar.setCheck(IDM_VIEW_ALL_CHARACTERS, allChecked);
+
+			_findReplaceDlg.updateFinderScintillaForNpc();
+
+			break;
+		}
+
 		case IDM_VIEW_ALL_CHARACTERS:
 		{
-			bool isChecked = !(::GetMenuState(_mainMenuHandle, id, MF_BYCOMMAND) == MF_CHECKED);
-			::CheckMenuItem(_mainMenuHandle, IDM_VIEW_EOL, MF_BYCOMMAND | MF_UNCHECKED);
-			::CheckMenuItem(_mainMenuHandle, IDM_VIEW_TAB_SPACE, MF_BYCOMMAND | MF_UNCHECKED);
-			::CheckMenuItem(_mainMenuHandle, IDM_VIEW_ALL_CHARACTERS, MF_BYCOMMAND | (isChecked?MF_CHECKED:MF_UNCHECKED));
+			auto setCheckMenuItem = [this](int id, bool check) -> DWORD {
+				return ::CheckMenuItem(_mainMenuHandle, id, MF_BYCOMMAND | (check ? MF_CHECKED : MF_UNCHECKED));
+			};
+
+			const bool isChecked = !(::GetMenuState(_mainMenuHandle, id, MF_BYCOMMAND) == MF_CHECKED);
+			setCheckMenuItem(id, isChecked);
+			setCheckMenuItem(IDM_VIEW_TAB_SPACE, isChecked);
+			setCheckMenuItem(IDM_VIEW_EOL, isChecked);
+			setCheckMenuItem(IDM_VIEW_NPC, isChecked);
+			_toolBar.setCheck(id, isChecked);
+
 			_mainEditView.showInvisibleChars(isChecked);
 			_subEditView.showInvisibleChars(isChecked);
-			_toolBar.setCheck(IDM_VIEW_ALL_CHARACTERS, isChecked);
 
-            ScintillaViewParams & svp1 = (ScintillaViewParams &)(NppParameters::getInstance()).getSVP();
-            svp1._whiteSpaceShow = isChecked;
-            svp1._eolShow = isChecked;
+			auto& svp1 = const_cast<ScintillaViewParams&>(NppParameters::getInstance().getSVP());
+
+			svp1._whiteSpaceShow = isChecked;
+			svp1._eolShow = isChecked;
+			svp1._npcShow = isChecked;
+
+			_findReplaceDlg.updateFinderScintillaForNpc();
+
 			break;
 		}
 
@@ -3050,11 +3129,13 @@ void Notepad_plus::command(int id)
         case IDM_VIEW_GOTO_ANOTHER_VIEW:
             docGotoAnotherEditView(TransferMove);
 			checkSyncState();
+			::SendMessage(_pPublicInterface->getHSelf(), WM_SIZE, 0, 0);
             break;
 
         case IDM_VIEW_CLONE_TO_ANOTHER_VIEW:
             docGotoAnotherEditView(TransferClone);
 			checkSyncState();
+			::SendMessage(_pPublicInterface->getHSelf(), WM_SIZE, 0, 0);
             break;
 
         case IDM_VIEW_GOTO_NEW_INSTANCE :
@@ -3390,6 +3471,7 @@ void Notepad_plus::command(int id)
         case IDM_LANG_XML :
         case IDM_LANG_JS :
 		case IDM_LANG_JSON :
+		case IDM_LANG_JSON5 :
         case IDM_LANG_PHP :
         case IDM_LANG_ASP :
         case IDM_LANG_CSS :
@@ -3532,7 +3614,7 @@ void Notepad_plus::command(int id)
 								hImgLst = _docTabIconList.getHandle();
 						}
 						tld.init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), hImgLst, direction);
-						tld.doDialog();
+						tld.doDialog(_nativeLangSpeaker.isRTL());
 					}
 				}
 			}
@@ -3967,6 +4049,7 @@ void Notepad_plus::command(int id)
 			case IDM_EDIT_RTL :
 			case IDM_EDIT_LTR :
 			case IDM_EDIT_BEGINENDSELECT:
+			case IDM_EDIT_BEGINENDSELECT_COLUMNMODE:
 			case IDM_EDIT_SORTLINES_LEXICOGRAPHIC_ASCENDING:
 			case IDM_EDIT_SORTLINES_LEXICOGRAPHIC_DESCENDING:
 			case IDM_EDIT_SORTLINES_LEXICO_CASE_INSENS_ASCENDING:

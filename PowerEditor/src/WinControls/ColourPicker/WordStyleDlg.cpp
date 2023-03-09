@@ -21,6 +21,7 @@
 #include "documentMap.h"
 #include "AutoCompletion.h"
 #include "preference_rc.h"
+#include "localization.h"
 
 using namespace std;
 
@@ -571,7 +572,7 @@ intptr_t CALLBACK WordStyleDlg::run_dlgProc(UINT Message, WPARAM wParam, LPARAM 
 						//return TRUE;
 				}
 			}
-
+			break;
 		}
 		default :
 			return FALSE;
@@ -581,8 +582,8 @@ intptr_t CALLBACK WordStyleDlg::run_dlgProc(UINT Message, WPARAM wParam, LPARAM 
 
 void WordStyleDlg::move2CtrlRight(int ctrlID, HWND handle2Move, int handle2MoveWidth, int handle2MoveHeight)
 {
-	POINT p;
-	RECT rc;
+	POINT p{};
+	RECT rc{};
 	::GetWindowRect(::GetDlgItem(_hSelf, ctrlID), &rc);
 
 	p.x = rc.right + NppParameters::getInstance()._dpiManager.scaleX(5);
@@ -710,7 +711,7 @@ void WordStyleDlg::updateFontSize()
 		else
 		{
 			TCHAR *finStr;
-			style._fontSize = generic_strtol(intStr, &finStr, 10);
+			style._fontSize = wcstol(intStr, &finStr, 10);
 			if (*finStr != '\0')
 				style._fontSize = STYLE_NOT_USED;
 		}
@@ -798,12 +799,14 @@ void WordStyleDlg::switchToTheme()
 		wcscpy_s(themeFileName, prevThemeName.c_str());
 		PathStripPath(themeFileName);
 		PathRemoveExtension(themeFileName);
-		int mb_response =
-			::MessageBox( _hSelf,
-				TEXT(" Unsaved changes are about to be discarded!\n")
-				TEXT(" Do you want to save your changes before switching themes?"),
-				themeFileName,
-				MB_ICONWARNING | MB_YESNO | MB_APPLMODAL | MB_SETFOREGROUND );
+		NativeLangSpeaker *pNativeSpeaker = nppParamInst.getNativeLangSpeaker();
+		int mb_response = pNativeSpeaker->messageBox("SwitchUnsavedThemeWarning",
+			_hSelf,
+			TEXT("Unsaved changes are about to be discarded!\nDo you want to save your changes before switching themes?"),
+			TEXT("$STR_REPLACE$"),
+			MB_ICONWARNING | MB_YESNO | MB_APPLMODAL | MB_SETFOREGROUND,
+			0,
+			themeFileName);
 		if ( mb_response == IDYES )
 			(NppParameters::getInstance()).writeStyles(_lsArray, _globalStyles);
 	}
@@ -983,6 +986,11 @@ std::pair<intptr_t, intptr_t> WordStyleDlg::goToPreferencesSettings()
 	{
 		result.first = 1;
 		result.second = IDC_CHECK_WITHCUSTOMCOLOR_CRLF;
+	}
+	else if (style._styleDesc == g_npcStyleName)
+	{
+		result.first = 1;
+		result.second = IDC_CHECK_NPC_COLOR;
 	}
 
 	return result;

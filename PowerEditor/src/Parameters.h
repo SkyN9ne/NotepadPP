@@ -116,7 +116,7 @@ const int LANG_INDEX_TYPE6 = 7;
 const int LANG_INDEX_TYPE7 = 8;
 
 const int COPYDATA_PARAMS = 0;
-const int COPYDATA_FILENAMESA = 1;
+//const int COPYDATA_FILENAMESA = 1; // obsolete, no more useful
 const int COPYDATA_FILENAMESW = 2;
 const int COPYDATA_FULL_CMDLINE = 3;
 
@@ -147,6 +147,8 @@ const TCHAR nppLogNulContentCorruptionIssue[] = TEXT("nppLogNulContentCorruption
 void cutString(const TCHAR *str2cut, std::vector<generic_string> & patternVect);
 void cutStringBy(const TCHAR *str2cut, std::vector<generic_string> & patternVect, char byChar, bool allowEmptyStr);
 
+// style names
+const wchar_t g_npcStyleName[] = L"Non-printing characters custom color";
 
 struct Position
 {
@@ -849,10 +851,11 @@ struct NppGUI final
 	GlobalOverride _globalOverride;
 	enum AutocStatus{autoc_none, autoc_func, autoc_word, autoc_both};
 	AutocStatus _autocStatus = autoc_both;
-	size_t  _autocFromLen = 1;
+	UINT  _autocFromLen = 1;
 	bool _autocIgnoreNumbers = true;
 	bool _autocInsertSelectedUseENTER = true;
 	bool _autocInsertSelectedUseTAB = true;
+	bool _autocBrief = false;
 	bool _funcParams = true;
 	MatchedPairConf _matchedPairConf;
 
@@ -883,10 +886,19 @@ struct NppGUI final
 	TCHAR _defaultDirExp[MAX_PATH];	//expanded environment variables
 	generic_string _themeName;
 	MultiInstSetting _multiInstSetting = monoInst;
-	bool _fileSwitcherWithoutExtColumn = true;
+	bool _clipboardHistoryPanelKeepState = false;
+	bool _docListKeepState = false;
+	bool _charPanelKeepState = false;
+	bool _fileBrowserKeepState = false;
+	bool _projectPanelKeepState = false;
+	bool _docMapKeepState = false;
+	bool _funcListKeepState = false;
+	bool _pluginPanelKeepState = false;
+	bool _fileSwitcherWithoutExtColumn = false;
 	int _fileSwitcherExtWidth = 50;
 	bool _fileSwitcherWithoutPathColumn = true;
 	int _fileSwitcherPathWidth = 50;
+	bool _fileSwitcherDisableListViewGroups = false;
 	bool isSnapshotMode() const {return _isSnapshotMode && _rememberLastSession && !_isCmdlineNosessionActivated;};
 	bool _isSnapshotMode = true;
 	size_t _snapshotBackupTiming = 7000;
@@ -935,6 +947,10 @@ struct ScintillaViewParams
 	bool _eolShow = false;
 	enum crlfMode {plainText = 0, roundedRectangleText = 1, plainTextCustomColor = 2, roundedRectangleTextCustomColor = 3};
 	crlfMode _eolMode = roundedRectangleText;
+	bool _npcShow = false;
+	enum npcMode { identity = 0, abbreviation = 1, codepoint = 2 };
+	npcMode _npcMode = abbreviation;
+	bool _npcCustomColor = false;
 
 	int _borderWidth = 2;
 	bool _virtualSpace = false;
@@ -966,6 +982,9 @@ const int NB_MAX_LRF_FILE = 30;
 const int NB_MAX_USER_LANG = 30;
 const int NB_MAX_EXTERNAL_LANG = 30;
 const int NB_MAX_IMPORTED_UDL = 50;
+
+constexpr int NB_DEFAULT_LRF_CUSTOMLENGTH = 100;
+constexpr int NB_MAX_LRF_CUSTOMLENGTH = MAX_PATH - 1;
 
 const int NB_MAX_FINDHISTORY_FIND	= 30;
 const int NB_MAX_FINDHISTORY_REPLACE = 30;
@@ -1272,7 +1291,7 @@ public:
 	bool themeNameExists(const TCHAR *themeName) {
 		for (size_t i = 0; i < _themeList.size(); ++i )
 		{
-			auto themeNameOnList = getElementFromIndex(i).first;
+			auto& themeNameOnList = getElementFromIndex(i).first;
 			if (lstrcmp(themeName, themeNameOnList.c_str()) == 0)
 				return true;
 		}
@@ -1444,11 +1463,11 @@ public:
 		return _LRFileList[index];
 	};
 
-	void setNbMaxRecentFile(int nb) {
+	void setNbMaxRecentFile(UINT nb) {
 		_nbMaxRecentFile = nb;
 	};
 
-	int getNbMaxRecentFile() const {return _nbMaxRecentFile;};
+	UINT getNbMaxRecentFile() const {return _nbMaxRecentFile;};
 
 	void setPutRecentFileInSubMenu(bool doSubmenu) {
 		_putRecentFileInSubMenu = doSubmenu;
@@ -1545,7 +1564,7 @@ public:
 	TiXmlDocument * getCustomizedToolIcons() const {return _pXmlToolIconsDoc;};
 
 	bool isTransparentAvailable() const {
-		return (_transparentFuncAddr != NULL);
+		return (_winVersion >= WV_VISTA);
 	}
 
 	// 0 <= percent < 256
@@ -1645,7 +1664,6 @@ public:
 	};
 
 	int langTypeToCommandID(LangType lt) const;
-	WNDPROC getEnableThemeDlgTexture() const {return _enableThemeDialogTextureFuncAddr;};
 
 	struct FindDlgTabTitiles final {
 		generic_string _find;
@@ -1802,7 +1820,7 @@ private:
 	// Recent File History
 	generic_string* _LRFileList[NB_MAX_LRF_FILE] = { nullptr };
 	int _nbRecentFile = 0;
-	int _nbMaxRecentFile = 10;
+	UINT _nbMaxRecentFile = 10;
 	bool _putRecentFileInSubMenu = false;
 	int _recentFileCustomLength = RECENTFILES_SHOWFULLPATH;	//	<0: Full File Path Name
 															//	=0: Only File Name
@@ -1829,10 +1847,6 @@ private:
 	std::vector<generic_string> _fontlist;
 	std::vector<generic_string> _blacklist;
 
-	HMODULE _hUXTheme = nullptr;
-
-	WNDPROC _transparentFuncAddr = nullptr;
-	WNDPROC _enableThemeDialogTextureFuncAddr = nullptr;
 	bool _isLocal = false;
 	bool _isx64 = false; // by default 32-bit
 	bool _isCloud = false;

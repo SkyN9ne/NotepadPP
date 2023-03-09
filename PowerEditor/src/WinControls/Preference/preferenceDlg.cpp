@@ -44,6 +44,10 @@ const int DISTRACTIONFREE_SMALLEST = 3;
 const int DISTRACTIONFREE_LARGEST = 9;
 const int DISTRACTIONFREE_INTERVAL = 1;
 
+constexpr int AUTOCOMPLETEFROMCHAR_SMALLEST = 1;
+constexpr int AUTOCOMPLETEFROMCHAR_LARGEST = 9;
+constexpr int AUTOCOMPLETEFROMCHAR_INTERVAL = 1;
+
 // This int encoding array is built from "EncodingUnit encodings[]" (see EncodingMapper.cpp)
 // And NewDocumentSubDlg will use "int encoding array" to get more info from "EncodingUnit encodings[]"
 static int encodings[] = {
@@ -199,33 +203,6 @@ intptr_t CALLBACK PreferenceDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 
 
 			makeCategoryList();
-			RECT rc;
-			getClientRect(rc);
-
-			rc.top += NppParameters::getInstance()._dpiManager.scaleY(10);
-			rc.bottom -= NppParameters::getInstance()._dpiManager.scaleY(50);
-			rc.left += NppParameters::getInstance()._dpiManager.scaleX(170);
-			
-			_generalSubDlg.reSizeTo(rc);
-			_editingSubDlg.reSizeTo(rc);
-			_darkModeSubDlg.reSizeTo(rc);
-			_marginsBorderEdgeSubDlg.reSizeTo(rc);
-			_miscSubDlg.reSizeTo(rc);
-			_newDocumentSubDlg.reSizeTo(rc);
-			_defaultDirectorySubDlg.reSizeTo(rc);
-			_recentFilesHistorySubDlg.reSizeTo(rc);
-			_fileAssocDlg.reSizeTo(rc);
-			_languageSubDlg.reSizeTo(rc);
-			_highlightingSubDlg.reSizeTo(rc);
-			_printSubDlg.reSizeTo(rc);
-			_searchingSubDlg.reSizeTo(rc);
-			_backupSubDlg.reSizeTo(rc);
-			_autoCompletionSubDlg.reSizeTo(rc);
-			_multiInstanceSubDlg.reSizeTo(rc);
-			_delimiterSubDlg.reSizeTo(rc);
-			_performanceSubDlg.reSizeTo(rc);
-			_cloudAndLinkSubDlg.reSizeTo(rc);
-			_searchEngineSubDlg.reSizeTo(rc);
 
 			NppDarkMode::autoSubclassAndThemeChildControls(_hSelf);
 
@@ -234,21 +211,13 @@ intptr_t CALLBACK PreferenceDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 
 		case WM_CTLCOLORLISTBOX:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorListbox(wParam, lParam);
-			}
-			break;
+			return NppDarkMode::onCtlColorListbox(wParam, lParam);
 		}
 
 		case WM_CTLCOLORDLG:
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_PRINTCLIENT:
@@ -264,8 +233,33 @@ intptr_t CALLBACK PreferenceDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 		{
 			NppDarkMode::autoThemeChildControls(_hSelf);
 
-			if (_performanceSubDlg._largeFileRestrictionTip)
+			if (_editingSubDlg._tip != nullptr)
+				NppDarkMode::setDarkTooltips(_editingSubDlg._tip, NppDarkMode::ToolTipsType::tooltip);
+
+			for (auto& tip : _editingSubDlg._tips)
+			{
+				if (tip != nullptr)
+				{
+					NppDarkMode::setDarkTooltips(tip, NppDarkMode::ToolTipsType::tooltip);
+				}
+			}
+			if (_delimiterSubDlg._tip != nullptr)
+				NppDarkMode::setDarkTooltips(_delimiterSubDlg._tip, NppDarkMode::ToolTipsType::tooltip);
+			if (_performanceSubDlg._largeFileRestrictionTip != nullptr)
 				NppDarkMode::setDarkTooltips(_performanceSubDlg._largeFileRestrictionTip, NppDarkMode::ToolTipsType::tooltip);
+
+			// groupbox label in dark mode support disabled text color
+			if (NppDarkMode::isEnabled())
+			{
+				const NppGUI& nppGUI = NppParameters::getInstance().getNppGUI();
+				::EnableWindow(::GetDlgItem(_highlightingSubDlg.getHSelf(), IDC_SMARTHILITEMATCHING_STATIC), nppGUI._enableSmartHilite);
+
+				const bool noBackup = _backupSubDlg.isCheckedOrNot(IDC_RADIO_BKNONE);
+				::EnableWindow(::GetDlgItem(_backupSubDlg.getHSelf(), IDC_BACKUPDIR_USERCUSTOMDIR_GRPSTATIC), !noBackup);
+
+				const bool isEnableAutoC = _autoCompletionSubDlg.isCheckedOrNot(IDD_AUTOC_ENABLECHECK);
+				::EnableWindow(::GetDlgItem(_autoCompletionSubDlg.getHSelf(), IDD_AUTOC_USEKEY_GRP_STATIC), isEnableAutoC);
+			}
 
 			return TRUE;
 		}
@@ -421,7 +415,7 @@ bool PreferenceDlg::setListSelection(size_t currentSel) const
 {
 	// Stupid LB API doesn't allow LB_SETSEL to be used on single select listbox, so we do it in a hard way
 	const size_t selStrLenMax = 255;
-	TCHAR selStr[selStrLenMax + 1];
+	TCHAR selStr[selStrLenMax + 1] = { '\0' };
 	auto lbTextLen = ::SendMessage(_hSelf, LB_GETTEXTLEN, currentSel, 0);
 
 	if (static_cast<size_t>(lbTextLen) > selStrLenMax)
@@ -601,21 +595,13 @@ intptr_t CALLBACK GeneralSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 
 		case WM_CTLCOLORLISTBOX:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColor(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColor(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_PRINTCLIENT:
@@ -764,7 +750,7 @@ intptr_t CALLBACK GeneralSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 								{
 									LocalizationSwitcher & localizationSwitcher = nppParam.getLocalizationSwitcher();
 									auto index = ::SendDlgItemMessage(_hSelf, IDC_COMBO_LOCALIZATION, CB_GETCURSEL, 0, 0);
-									TCHAR langName[MAX_PATH];
+									TCHAR langName[MAX_PATH] = { '\0' };
 									auto cbTextLen = ::SendDlgItemMessage(_hSelf, IDC_COMBO_LOCALIZATION, CB_GETLBTEXTLEN, index, 0);
 									if (cbTextLen > MAX_PATH - 1)
 										return TRUE;
@@ -842,7 +828,8 @@ void EditingSubDlg::initScintParam()
 void EditingSubDlg::changeLineHiliteMode(bool enableSlider)
 {
 	::EnableWindow(::GetDlgItem(_hSelf, IDC_CARETLINEFRAME_WIDTH_SLIDER), enableSlider);
-	redraw();
+	redrawDlgItem(IDC_CARETLINEFRAME_WIDTH_STATIC);
+	redrawDlgItem(IDC_CARETLINEFRAME_WIDTH_DISPLAY);
 	::SendMessage(_hParent, WM_COMMAND, IDM_VIEW_CURLINE_HILITING, 0);
 }
 
@@ -930,9 +917,63 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			generic_string tip2show = pNativeSpeaker->getLocalizedStrFromID("eol-custom-color-tip", TEXT("Go to Style Configurator to change the default EOL custom color (\"EOL custom color\")."));
 
 			_tip = CreateToolTip(IDC_BUTTON_LAUNCHSTYLECONF_CRLF, _hSelf, _hInst, const_cast<PTSTR>(tip2show.c_str()), pNativeSpeaker->isRTL());
-			if (_tip)
+
+			const bool isNpcModeAbbrv = svp._npcMode == svp.abbreviation;
+			::SendDlgItemMessage(_hSelf, IDC_RADIO_NPC_ABBREVIATION, BM_SETCHECK, isNpcModeAbbrv, 0);
+			::SendDlgItemMessage(_hSelf, IDC_RADIO_NPC_CODEPOINT, BM_SETCHECK, !isNpcModeAbbrv, 0);
+
+			::SendDlgItemMessage(_hSelf, IDC_CHECK_NPC_COLOR, BM_SETCHECK, svp._npcCustomColor, 0);
+
+			generic_string tipNote2Show = pNativeSpeaker->getLocalizedStrFromID("npcNote-tip",
+				L"Representation of selected \"non-ASCII\" whitespace and non-printing (control) characters.\n\n"\
+				L"NOTE:\n"\
+				L"Some characters might already have some representation and are thus visible. "\
+				L"Line separator and paragraph separator are already represented by abbreviation by default.\n\n"\
+				L"Using representation will disable character effects on text.\n\n"\
+				L"For the full list of selected whitespace and non-printing characters check User Manual.\n\n"\
+				L"Click on this button to open website with User Manual.");
+
+			generic_string tipAb2Show = pNativeSpeaker->getLocalizedStrFromID("npcAbbreviation-tip",
+				L"Abbreviation : name\n"\
+				L"NBSP : no-break space\n"\
+				L"ZWSP : zero-width space\n"\
+				L"ZWNBSP : zero-width no-break space\n\n"\
+				L"For the full list check User Manual.\n"\
+				L"Click on \"?\" button on right to open website with User Manual.");
+
+			generic_string tipCp2Show = pNativeSpeaker->getLocalizedStrFromID("npcCodepoint-tip",
+				L"Codepoint : name\n"\
+				L"U+00A0 : no-break space\n"\
+				L"U+200B : zero-width space\n"\
+				L"U+FEFF : zero-width no-break space\n\n"\
+				L"For the full list check User Manual.\n"\
+				L"Click on \"?\" button on right to open website with User Manual.");
+
+			generic_string tipNpcCol2show = pNativeSpeaker->getLocalizedStrFromID("npcCustomColor-tip",
+				L"Go to Style Configurator to change the default custom color for selected whitespace and non-printing characters (\"Non-printing characters custom color\").");
+
+			_tipNote = CreateToolTip(IDC_BUTTON_NPC_NOTE, _hSelf, _hInst, const_cast<PTSTR>(tipNote2Show.c_str()), pNativeSpeaker->isRTL());
+			_tipAbb = CreateToolTip(IDC_RADIO_NPC_ABBREVIATION, _hSelf, _hInst, const_cast<PTSTR>(tipAb2Show.c_str()), pNativeSpeaker->isRTL());
+			_tipCodepoint = CreateToolTip(IDC_RADIO_NPC_CODEPOINT, _hSelf, _hInst, const_cast<PTSTR>(tipCp2Show.c_str()), pNativeSpeaker->isRTL());
+			_tipNpcColor = CreateToolTip(IDC_BUTTON_NPC_LAUNCHSTYLECONF, _hSelf, _hInst, const_cast<PTSTR>(tipNpcCol2show.c_str()), pNativeSpeaker->isRTL());
+			
+			_tips.emplace_back(_tipNote);
+			_tips.emplace_back(_tipAbb);
+			_tips.emplace_back(_tipCodepoint);
+			_tips.emplace_back(_tipNpcColor);
+
+			for (auto& tip : _tips)
 			{
-				SendMessage(_tip, TTM_ACTIVATE, TRUE, 0);
+				if (tip != nullptr)
+				{
+					::SendMessage(tip, TTM_SETMAXTIPWIDTH, 0, 260);
+				}
+			}
+
+			if (_tipNote != nullptr)
+			{
+				// Make tip stay 30 seconds
+				::SendMessage(_tipNote, TTM_SETDELAYTIME, TTDT_AUTOPOP, MAKELPARAM((30000), (0)));
 			}
 
 			initScintParam();
@@ -942,34 +983,17 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 
 		case WM_CTLCOLOREDIT:
 		{
-			if (_tip)
-			{
-				NppDarkMode::setDarkTooltips(_tip, NppDarkMode::ToolTipsType::tooltip);
-			}
-
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORLISTBOX:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColor(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColor(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORSTATIC:
@@ -981,12 +1005,7 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			{
 				return NppDarkMode::onCtlColorDarkerBGStaticText(reinterpret_cast<HDC>(wParam), (svp._currentLineHiliteMode == LINEHILITE_FRAME));
 			}
-
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_PRINTCLIENT:
@@ -1085,6 +1104,44 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 					return TRUE;
 				}
 
+				case IDC_RADIO_NPC_ABBREVIATION:
+				case IDC_RADIO_NPC_CODEPOINT:
+				{
+					if (wParam == IDC_RADIO_NPC_CODEPOINT)
+					{
+						svp._npcMode = svp.codepoint;
+					}
+					else // if (wParam == IDC_RADIO_NONPRINT_ABBREVIATION)
+					{
+						svp._npcMode = svp.abbreviation;
+					}
+
+					HWND grandParent = ::GetParent(_hParent);
+					::SendMessage(grandParent, NPPM_INTERNAL_SETNPC, 0, 0);
+					return TRUE;
+				}
+
+				case IDC_BUTTON_NPC_NOTE:
+				{
+					::ShellExecute(NULL, L"open", L"https://npp-user-manual.org/docs/views/#show-symbol", NULL, NULL, SW_SHOWNORMAL);
+					return TRUE;
+				}
+
+				case IDC_CHECK_NPC_COLOR:
+				{
+					svp._npcCustomColor = isCheckedOrNot(IDC_CHECK_NPC_COLOR);
+					HWND grandParent = ::GetParent(_hParent);
+					::SendMessage(grandParent, NPPM_INTERNAL_NPCFORMCHANGED, 0, 0);
+					return TRUE;
+				}
+
+				case IDC_BUTTON_NPC_LAUNCHSTYLECONF:
+				{
+					HWND grandParent = ::GetParent(_hParent);
+					::SendMessage(grandParent, NPPM_INTERNAL_NPCLAUNCHSTYLECONF, 0, 0);
+					return TRUE;
+				}
+
 				case IDC_CHECK_VIRTUALSPACE:
 					svp._virtualSpace = (BST_CHECKED == ::SendDlgItemMessage(_hSelf, IDC_CHECK_VIRTUALSPACE, BM_GETCHECK, 0, 0));
 					::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_VIRTUALSPACE, 0, 0);
@@ -1179,15 +1236,13 @@ void DarkModeSubDlg::enableCustomizedColorCtrls(bool doEnable)
 		_pLinkColorPicker->setColour(NppDarkMode::getLinkTextColor());
 		_pHotEdgeColorPicker->setColour(NppDarkMode::getHotEdgeColor());
 		_pDisabledEdgeColorPicker->setColour(NppDarkMode::getDisabledEdgeColor());
-
-		redraw();
 	}
 }
 
 void DarkModeSubDlg::move2CtrlLeft(int ctrlID, HWND handle2Move, int handle2MoveWidth, int handle2MoveHeight)
 {
-	POINT p;
-	RECT rc;
+	POINT p{};
+	RECT rc{};
 	::GetWindowRect(::GetDlgItem(_hSelf, ctrlID), &rc);
 
 	NppParameters& nppParam = NppParameters::getInstance();
@@ -1386,6 +1441,8 @@ intptr_t CALLBACK DarkModeSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 			delete _pLinkColorPicker;
 			delete _pHotEdgeColorPicker;
 			delete _pDisabledEdgeColorPicker;
+
+			return TRUE;
 		}
 
 		case WM_COMMAND:
@@ -1399,6 +1456,7 @@ intptr_t CALLBACK DarkModeSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 				{
 					NppDarkMode::handleSettingChange(nullptr, 0, true);
 				}
+				[[fallthrough]];
 				case IDC_RADIO_DARKMODE_LIGHTMODE:
 				case IDC_RADIO_DARKMODE_DARKMODE:
 				{
@@ -1621,8 +1679,6 @@ intptr_t CALLBACK DarkModeSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 					_pLinkColorPicker->setColour(disabledColor);
 					_pHotEdgeColorPicker->setColour(disabledColor);
 					_pDisabledEdgeColorPicker->setColour(disabledColor);
-
-					redraw();
 				}
 
 				NppDarkMode::refreshDarkMode(_hSelf, forceRefresh);
@@ -1740,21 +1796,13 @@ intptr_t CALLBACK MarginsBorderEdgeSubDlg::run_dlgProc(UINT message, WPARAM wPar
 
 		case WM_CTLCOLOREDIT:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_PRINTCLIENT:
@@ -1978,30 +2026,18 @@ intptr_t CALLBACK MiscSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 
 		case WM_CTLCOLOREDIT:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORLISTBOX:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColor(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColor(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_PRINTCLIENT:
@@ -2021,14 +2057,14 @@ intptr_t CALLBACK MiscSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 				{
 					case  IDC_EDIT_SESSIONFILEEXT:
 					{
-						TCHAR sessionExt[MAX_PATH];
+						TCHAR sessionExt[MAX_PATH] = { '\0' };
 						::SendDlgItemMessage(_hSelf, IDC_EDIT_SESSIONFILEEXT, WM_GETTEXT, MAX_PATH, reinterpret_cast<LPARAM>(sessionExt));
 						nppGUI._definedSessionExt = sessionExt;
 						return TRUE;
 					}
 					case  IDC_EDIT_WORKSPACEFILEEXT:
 					{
-						TCHAR workspaceExt[MAX_PATH];
+						TCHAR workspaceExt[MAX_PATH] = { '\0' };
 						::SendDlgItemMessage(_hSelf, IDC_EDIT_WORKSPACEFILEEXT, WM_GETTEXT, MAX_PATH, reinterpret_cast<LPARAM>(workspaceExt));
 						nppGUI._definedWorkspaceExt = workspaceExt;
 						return TRUE;
@@ -2184,14 +2220,6 @@ intptr_t CALLBACK MiscSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 	return FALSE;
 }
 
-
-void RecentFilesHistorySubDlg::setCustomLen(int val)
-{
-	::EnableWindow(::GetDlgItem(_hSelf, IDC_CUSTOMIZELENGTHVAL_STATIC), val > 0);
-	::SetDlgItemInt(_hSelf, IDC_CUSTOMIZELENGTHVAL_STATIC, val, FALSE);
-	::ShowWindow(::GetDlgItem(_hSelf, IDC_CUSTOMIZELENGTHVAL_STATIC), val > 0?SW_SHOW:SW_HIDE);
-}
-
 intptr_t CALLBACK NewDocumentSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 {
 	NppParameters& nppParam = NppParameters::getInstance();
@@ -2305,25 +2333,19 @@ intptr_t CALLBACK NewDocumentSubDlg::run_dlgProc(UINT message, WPARAM wParam, LP
 					break;
 			}
 			::SendDlgItemMessage(_hSelf, IDC_COMBO_DEFAULTLANG, CB_SETCURSEL, j, 0);
+
+			return TRUE;
 		}
 
 		case WM_CTLCOLORLISTBOX:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColor(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColor(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_PRINTCLIENT:
@@ -2459,25 +2481,19 @@ intptr_t CALLBACK DefaultDirectorySubDlg::run_dlgProc(UINT message, WPARAM wPara
 			::EnableWindow(::GetDlgItem(_hSelf, IDD_OPENSAVEDIR_ALWAYSON_BROWSE_BUTTON), shouldActivated);
 
 			::SendDlgItemMessage(_hSelf, IDC_OPENSAVEDIR_CHECK_DRROPFOLDEROPENFILES, BM_SETCHECK, nppGUI._isFolderDroppedOpenFiles ? BST_CHECKED : BST_UNCHECKED, 0);
+
+			return TRUE;
 		}
 
 		case WM_CTLCOLOREDIT:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_PRINTCLIENT:
@@ -2547,20 +2563,23 @@ intptr_t CALLBACK DefaultDirectorySubDlg::run_dlgProc(UINT message, WPARAM wPara
 	return FALSE;
 }
 
-intptr_t CALLBACK RecentFilesHistorySubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
+void RecentFilesHistorySubDlg::setCustomLen(int val)
+{
+	::SetDlgItemInt(_hSelf, IDC_EDIT_CUSTOMIZELENGTHVAL, val, FALSE);
+	::EnableWindow(::GetDlgItem(_hSelf, IDC_EDIT_CUSTOMIZELENGTHVAL), val > 0);
+}
+
+intptr_t CALLBACK RecentFilesHistorySubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	NppParameters& nppParam = NppParameters::getInstance();
-	NppGUI & nppGUI = (NppGUI & )nppParam.getNppGUI();
-	NativeLangSpeaker *pNativeSpeaker = nppParam.getNativeLangSpeaker();
+	NppGUI& nppGUI = nppParam.getNppGUI();
 
 	switch (message) 
 	{
-		case WM_INITDIALOG :
+		case WM_INITDIALOG:
 		{
 			// Max number recent file setting
-			::SetDlgItemInt(_hSelf, IDC_MAXNBFILEVAL_STATIC, nppParam.getNbMaxRecentFile(), FALSE);
-			_nbHistoryVal.init(_hInst, _hSelf);
-			_nbHistoryVal.create(::GetDlgItem(_hSelf, IDC_MAXNBFILEVAL_STATIC), IDC_MAXNBFILEVAL_STATIC);
+			::SetDlgItemInt(_hSelf, IDC_EDIT_MAXNBFILEVAL, nppParam.getNbMaxRecentFile(), FALSE);
 
 			// Check on launch time settings
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_DONTCHECKHISTORY, BM_SETCHECK, !nppGUI._checkHistoryFiles, 0);
@@ -2583,23 +2602,40 @@ intptr_t CALLBACK RecentFilesHistorySubDlg::run_dlgProc(UINT message, WPARAM wPa
 				id = IDC_RADIO_FULLFILENAMEPATH;
 				length = 0;
 			}
-			::SendDlgItemMessage(_hSelf, id, BM_SETCHECK, BST_CHECKED, 0);
-			::EnableWindow(::GetDlgItem(_hSelf, IDC_CUSTOMIZELENGTHVAL_STATIC), id == IDC_RADIO_CUSTOMIZELENTH);
-			::ShowWindow(::GetDlgItem(_hSelf, IDC_CUSTOMIZELENGTHVAL_STATIC), id == IDC_RADIO_CUSTOMIZELENTH?SW_SHOW:SW_HIDE);
-			
-			::SetDlgItemInt(_hSelf, IDC_CUSTOMIZELENGTHVAL_STATIC, length, FALSE);
-			_customLenVal.init(_hInst, _hSelf);
-			_customLenVal.create(::GetDlgItem(_hSelf, IDC_CUSTOMIZELENGTHVAL_STATIC), nullptr);
+
+			setChecked(id);
+			setCustomLen(length);
+
+			return TRUE;
+		}
+
+		case WM_CTLCOLOREDIT:
+		{
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
+		{
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
+		}
+
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
+			const auto hdcStatic = reinterpret_cast<HDC>(wParam);
+			const auto dlgCtrlID = ::GetDlgCtrlID(reinterpret_cast<HWND>(lParam));
+
+			//set the static text colors to show enable/disable instead of ::EnableWindow which causes blurry text
+			if (dlgCtrlID == IDC_CUSTOMIZELENGTH_RANGE_STATIC)
 			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
+				const bool isTextEnabled = isCheckedOrNot(IDC_RADIO_CUSTOMIZELENTH);
+				return NppDarkMode::onCtlColorDarkerBGStaticText(hdcStatic, isTextEnabled);
 			}
-			break;
+
+			if (dlgCtrlID == IDC_EDIT_CUSTOMIZELENGTHVAL)
+			{
+				return NppDarkMode::onCtlColor(hdcStatic);
+			}
+			return NppDarkMode::onCtlColorDarker(hdcStatic);
 		}
 
 		case WM_PRINTCLIENT:
@@ -2611,37 +2647,127 @@ intptr_t CALLBACK RecentFilesHistorySubDlg::run_dlgProc(UINT message, WPARAM wPa
 			break;
 		}
 
-		case WM_COMMAND : 
+		case WM_COMMAND:
 		{
+			switch (LOWORD(wParam))
+			{
+				case IDC_EDIT_MAXNBFILEVAL:
+				{
+					switch (HIWORD(wParam))
+					{
+						case EN_KILLFOCUS:
+						{
+							constexpr int stringSize = 3;
+							wchar_t str[stringSize]{};
+							::GetDlgItemText(_hSelf, IDC_EDIT_MAXNBFILEVAL, str, stringSize);
+
+							if (lstrcmp(str, L"") == 0)
+							{
+								::SetDlgItemInt(_hSelf, IDC_EDIT_MAXNBFILEVAL, nppParam.getNbMaxRecentFile(), FALSE);
+								return FALSE;
+							}
+
+							UINT nbMaxFile = ::GetDlgItemInt(_hSelf, IDC_EDIT_MAXNBFILEVAL, nullptr, FALSE);
+
+							if (nbMaxFile == nppParam.getNbMaxRecentFile())
+							{
+								return FALSE;
+							}
+
+							if (nbMaxFile > NB_MAX_LRF_FILE)
+							{
+								::SetDlgItemInt(_hSelf, IDC_EDIT_MAXNBFILEVAL, NB_MAX_LRF_FILE, FALSE);
+
+								nbMaxFile = NB_MAX_LRF_FILE;
+							}
+
+							nppParam.setNbMaxRecentFile(nbMaxFile);
+							::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_SETTING_HISTORY_SIZE, 0, 0);
+
+							return TRUE;
+						}
+
+						default:
+						{
+							break;
+						}
+					}
+
+					return FALSE;
+				}
+
+				case IDC_EDIT_CUSTOMIZELENGTHVAL:
+				{
+					if (!isCheckedOrNot(IDC_RADIO_CUSTOMIZELENTH))
+					{
+						return FALSE;
+					}
+
+					switch (HIWORD(wParam))
+					{
+						case EN_KILLFOCUS:
+						{
+							constexpr int stringSize = 4;
+							wchar_t str[stringSize]{};
+							::GetDlgItemText(_hSelf, IDC_EDIT_CUSTOMIZELENGTHVAL, str, stringSize);
+
+							if (lstrcmp(str, L"") == 0)
+							{
+								::SetDlgItemInt(_hSelf, IDC_EDIT_CUSTOMIZELENGTHVAL, nppParam.getRecentFileCustomLength(), FALSE);
+								return FALSE;
+							}
+
+							UINT size = ::GetDlgItemInt(_hSelf, IDC_EDIT_CUSTOMIZELENGTHVAL, nullptr, FALSE);
+
+							if (size == static_cast<UINT>(nppParam.getRecentFileCustomLength()))
+							{
+								return FALSE;
+							}
+
+							bool change = false;
+
+							if (size == 0)
+							{
+								size = NB_DEFAULT_LRF_CUSTOMLENGTH;
+								change = true;
+							}
+							else if (size > NB_MAX_LRF_CUSTOMLENGTH)
+							{
+								size = NB_MAX_LRF_CUSTOMLENGTH;
+								change = true;
+							}
+
+							if (change)
+							{
+								::SetDlgItemInt(_hSelf, IDC_EDIT_CUSTOMIZELENGTHVAL, size, FALSE);
+							}
+
+							nppParam.setRecentFileCustomLength(size);
+							::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_RECENTFILELIST_UPDATE, 0, 0);
+
+							return TRUE;
+						}
+
+						default:
+						{
+							break;
+						}
+					}
+
+					return FALSE;
+				}
+
+				default:
+				{
+					break;
+				}
+			}
+
 			switch (wParam)
 			{
 				case IDC_CHECK_DONTCHECKHISTORY:
 					nppGUI._checkHistoryFiles = !isCheckedOrNot(IDC_CHECK_DONTCHECKHISTORY);
 					return TRUE;
-
-				case IDC_MAXNBFILEVAL_STATIC:
-				{
-					generic_string staticText = pNativeSpeaker->getLocalizedStrFromID("recent-file-history-maxfile", TEXT("Max File: "));
-					ValueDlg nbFileMaxDlg;
-					nbFileMaxDlg.init(NULL, _hSelf, nppParam.getNbMaxRecentFile(), staticText.c_str());
-					
-					POINT p;
-					::GetCursorPos(&p);
-
-					int nbMaxFile = nbFileMaxDlg.doDialog(p);
-					if (nbMaxFile != -1)
-					{
-						if (nbMaxFile > NB_MAX_LRF_FILE)
-							nbMaxFile = NB_MAX_LRF_FILE;
-						
-						nppParam.setNbMaxRecentFile(nbMaxFile);
-						::SetDlgItemInt(_hSelf, IDC_MAXNBFILEVAL_STATIC, nbMaxFile, FALSE);
-
-						// Validate modified value
-						::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_SETTING_HISTORY_SIZE, 0, 0);
-					}
-					return TRUE;
-				}
 
 				case IDC_CHECK_INSUBMENU:
 					nppParam.setPutRecentFileInSubMenu(isCheckedOrNot(IDC_CHECK_INSUBMENU));
@@ -2649,46 +2775,42 @@ intptr_t CALLBACK RecentFilesHistorySubDlg::run_dlgProc(UINT message, WPARAM wPa
 					return TRUE;
 
 				case IDC_RADIO_ONLYFILENAME:
+				{
 					setCustomLen(0);
 					nppParam.setRecentFileCustomLength(0);
 					::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_RECENTFILELIST_UPDATE, 0, 0);
+
+					redrawDlgItem(IDC_CUSTOMIZELENGTH_RANGE_STATIC);
+
 					return TRUE;
+				}
+
 				case IDC_RADIO_FULLFILENAMEPATH:
+				{
 					setCustomLen(0);
 					nppParam.setRecentFileCustomLength(-1);
 					::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_RECENTFILELIST_UPDATE, 0, 0);
+
+					redrawDlgItem(IDC_CUSTOMIZELENGTH_RANGE_STATIC);
+
 					return TRUE;
+				}
+
 				case IDC_RADIO_CUSTOMIZELENTH:
 				{
 					int len = nppParam.getRecentFileCustomLength();
 					if (len <= 0)
 					{
-						setCustomLen(100);
-						nppParam.setRecentFileCustomLength(100);
+						setCustomLen(NB_DEFAULT_LRF_CUSTOMLENGTH);
+						nppParam.setRecentFileCustomLength(NB_DEFAULT_LRF_CUSTOMLENGTH);
 						::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_RECENTFILELIST_UPDATE, 0, 0);
 					}
+
+					redrawDlgItem(IDC_CUSTOMIZELENGTH_RANGE_STATIC);
+
 					return TRUE;
 				}
 
-				case IDC_CUSTOMIZELENGTHVAL_STATIC:
-				{
-					generic_string staticText = pNativeSpeaker->getLocalizedStrFromID("recent-file-history-customlength", TEXT("Length: "));
-					ValueDlg customLengthDlg;
-					customLengthDlg.init(NULL, _hSelf, nppParam.getRecentFileCustomLength(), staticText.c_str());
-					customLengthDlg.setNBNumber(3);
-
-					POINT p;
-					::GetCursorPos(&p);
-
-					int size = customLengthDlg.doDialog(p);
-					if (size != -1)
-					{
-						::SetDlgItemInt(_hSelf, IDC_CUSTOMIZELENGTHVAL_STATIC, size, FALSE);
-						nppParam.setRecentFileCustomLength(size);
-						::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_RECENTFILELIST_UPDATE, 0, 0);
-					}
-					return TRUE;
-				}
 				default:
 					return FALSE;
 			}
@@ -2741,10 +2863,7 @@ intptr_t CALLBACK LanguageSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 			//
 			// Tab settings
 			//
-			::SetDlgItemInt(_hSelf, IDC_TABSIZEVAL_STATIC, nppGUI._tabSize, FALSE);
-
-			_tabSizeVal.init(_hInst, _hSelf);
-			_tabSizeVal.create(::GetDlgItem(_hSelf, IDC_TABSIZEVAL_STATIC), IDC_TABSIZEVAL_STATIC);
+			::SetDlgItemInt(_hSelf, IDC_EDIT_TABSIZEVAL, nppGUI._tabSize, FALSE);
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_REPLACEBYSPACE, BM_SETCHECK, nppGUI._tabReplacedBySpace, 0);
 
 			::SendDlgItemMessage(_hSelf, IDC_LIST_TABSETTNG, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(TEXT("[Default]")));
@@ -2757,31 +2876,44 @@ intptr_t CALLBACK LanguageSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 			::SendDlgItemMessage(_hSelf, IDC_LIST_TABSETTNG, LB_SETCURSEL, index2Begin, 0);
 			::ShowWindow(::GetDlgItem(_hSelf, IDC_GR_TABVALUE_STATIC), SW_HIDE);
 			::ShowWindow(::GetDlgItem(_hSelf, IDC_CHECK_DEFAULTTABVALUE), SW_HIDE);
-			::EnableWindow(::GetDlgItem(_hSelf, IDC_TABSIZEVAL_DISABLE_STATIC), FALSE);
-			::ShowWindow(::GetDlgItem(_hSelf, IDC_TABSIZEVAL_DISABLE_STATIC), SW_HIDE);
 
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_BACKSLASHISESCAPECHARACTERFORSQL, BM_SETCHECK, nppGUI._backSlashIsEscapeCharacterForSql, 0);
 
 			return TRUE;
 		}
 
+		case WM_CTLCOLOREDIT:
+		{
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
+		}
+
 		case WM_CTLCOLORLISTBOX:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorListbox(wParam, lParam);
-			}
-			break;
+			return NppDarkMode::onCtlColorListbox(wParam, lParam);
 		}
 
 		case WM_CTLCOLORDLG:
+		{
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
+		}
+
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
+			const int dlgCtrlID = ::GetDlgCtrlID(reinterpret_cast<HWND>(lParam));
+			const auto& hdcStatic = reinterpret_cast<HDC>(wParam);
+			// handle blurry text with disabled states for the affected static controls
+			const size_t index = ::SendDlgItemMessage(_hSelf, IDC_LIST_TABSETTNG, LB_GETCURSEL, 0, 0);
+			if ((index > 0) && (dlgCtrlID == IDC_TABSIZE_STATIC))
 			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
+				const Lang* lang = nppParam.getLangFromIndex(index - 1);
+				if (lang == nullptr)
+				{
+					return NppDarkMode::onCtlColorDarker(hdcStatic);
+				}
+				const bool useDefaultTab = isCheckedOrNot(IDC_CHECK_DEFAULTTABVALUE);
+				return NppDarkMode::onCtlColorDarkerBGStaticText(hdcStatic, !useDefaultTab);
 			}
-			break;
+			return NppDarkMode::onCtlColorDarker(hdcStatic);
 		}
 
 		case WM_PRINTCLIENT:
@@ -2795,117 +2927,217 @@ intptr_t CALLBACK LanguageSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 
 		case WM_COMMAND : 
 		{
-			if (HIWORD(wParam) == LBN_SELCHANGE)
-            {
-				// Lang Menu
-				if (LOWORD(wParam) == IDC_LIST_DISABLEDLANG || LOWORD(wParam) == IDC_LIST_ENABLEDLANG)
+			switch (HIWORD(wParam))
+			{
+				case LBN_SELCHANGE:
 				{
-					int idButton2Enable;
-					int idButton2Disable;
-
-					if (LOWORD(wParam) == IDC_LIST_ENABLEDLANG)
+					// Lang Menu
+					if (LOWORD(wParam) == IDC_LIST_DISABLEDLANG || LOWORD(wParam) == IDC_LIST_ENABLEDLANG)
 					{
-						idButton2Enable = IDC_BUTTON_REMOVE;
-						idButton2Disable = IDC_BUTTON_RESTORE;
-					}
-					else //IDC_LIST_DISABLEDLANG
-					{
-						idButton2Enable = IDC_BUTTON_RESTORE;
-						idButton2Disable = IDC_BUTTON_REMOVE;
-					}
+						int idButton2Enable;
+						int idButton2Disable;
 
-					auto i = ::SendDlgItemMessage(_hSelf, LOWORD(wParam), LB_GETCURSEL, 0, 0);
-					if (i != LB_ERR)
-					{
-						::EnableWindow(::GetDlgItem(_hSelf, idButton2Enable), TRUE);
-						int idListbox2Disable = (LOWORD(wParam)== IDC_LIST_ENABLEDLANG)?IDC_LIST_DISABLEDLANG:IDC_LIST_ENABLEDLANG;
-						::SendDlgItemMessage(_hSelf, idListbox2Disable, LB_SETCURSEL, static_cast<WPARAM>(-1), 0);
-						::EnableWindow(::GetDlgItem(_hSelf, idButton2Disable), FALSE);
-					}
-					return TRUE;
-
-				}
-				// Tab setting
-				else if (LOWORD(wParam) == IDC_LIST_TABSETTNG)
-				{
-					auto index = ::SendDlgItemMessage(_hSelf, IDC_LIST_TABSETTNG, LB_GETCURSEL, 0, 0);
-					if (index == LB_ERR)
-						return FALSE;
-					::ShowWindow(::GetDlgItem(_hSelf, IDC_GR_TABVALUE_STATIC), index ? SW_SHOW : SW_HIDE);
-					::ShowWindow(::GetDlgItem(_hSelf, IDC_CHECK_DEFAULTTABVALUE), index ? SW_SHOW : SW_HIDE);
-
-					if (index)
-					{
-						Lang *lang = nppParam.getLangFromIndex(index - 1);
-						if (!lang) return FALSE;
-						bool useDefaultTab = (lang->_tabSize == -1 || lang->_tabSize == 0);
-
-						::SendMessage(::GetDlgItem(_hSelf, IDC_CHECK_DEFAULTTABVALUE), BM_SETCHECK, useDefaultTab, 0);
-						::EnableWindow(::GetDlgItem(_hSelf, IDC_TABSIZE_STATIC), !useDefaultTab);
-
-						int size = useDefaultTab ? nppGUI._tabSize : lang->_tabSize;
-						::SetDlgItemInt(_hSelf, IDC_TABSIZEVAL_STATIC, size, FALSE);
-						::SetDlgItemInt(_hSelf, IDC_TABSIZEVAL_DISABLE_STATIC, size, FALSE);
-
-						::EnableWindow(::GetDlgItem(_hSelf, IDC_TABSIZEVAL_STATIC), !useDefaultTab);
-						::ShowWindow(::GetDlgItem(_hSelf, IDC_TABSIZEVAL_DISABLE_STATIC), useDefaultTab);
-						::ShowWindow(::GetDlgItem(_hSelf, IDC_TABSIZEVAL_STATIC), !useDefaultTab);
-						::SendMessage(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), BM_SETCHECK, useDefaultTab ? nppGUI._tabReplacedBySpace : lang->_isTabReplacedBySpace, 0);
-						::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), !useDefaultTab);
-
-						if (!useDefaultTab)
+						if (LOWORD(wParam) == IDC_LIST_ENABLEDLANG)
 						{
-							::SetDlgItemInt(_hSelf, IDC_TABSIZEVAL_STATIC, lang->_tabSize, FALSE);
-							::SendMessage(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), BM_SETCHECK, lang->_isTabReplacedBySpace, 0);
+							idButton2Enable = IDC_BUTTON_REMOVE;
+							idButton2Disable = IDC_BUTTON_RESTORE;
+						}
+						else //IDC_LIST_DISABLEDLANG
+						{
+							idButton2Enable = IDC_BUTTON_RESTORE;
+							idButton2Disable = IDC_BUTTON_REMOVE;
+						}
+
+						auto i = ::SendDlgItemMessage(_hSelf, LOWORD(wParam), LB_GETCURSEL, 0, 0);
+						if (i != LB_ERR)
+						{
+							::EnableWindow(::GetDlgItem(_hSelf, idButton2Enable), TRUE);
+							int idListbox2Disable = (LOWORD(wParam) == IDC_LIST_ENABLEDLANG) ? IDC_LIST_DISABLEDLANG : IDC_LIST_ENABLEDLANG;
+							::SendDlgItemMessage(_hSelf, idListbox2Disable, LB_SETCURSEL, static_cast<WPARAM>(-1), 0);
+							::EnableWindow(::GetDlgItem(_hSelf, idButton2Disable), FALSE);
+						}
+						return TRUE;
+
+					}
+					// Tab setting
+					else if (LOWORD(wParam) == IDC_LIST_TABSETTNG)
+					{
+						auto index = ::SendDlgItemMessage(_hSelf, IDC_LIST_TABSETTNG, LB_GETCURSEL, 0, 0);
+						if (index == LB_ERR)
+							return FALSE;
+						::ShowWindow(::GetDlgItem(_hSelf, IDC_GR_TABVALUE_STATIC), index > 0 ? SW_SHOW : SW_HIDE);
+						::ShowWindow(::GetDlgItem(_hSelf, IDC_CHECK_DEFAULTTABVALUE), index > 0 ? SW_SHOW : SW_HIDE);
+
+						if (index > 0)
+						{
+							Lang* lang = nppParam.getLangFromIndex(index - 1);
+							if (!lang) return FALSE;
+							bool useDefaultTab = (lang->_tabSize == -1 || lang->_tabSize == 0);
+
+							::SendMessage(::GetDlgItem(_hSelf, IDC_CHECK_DEFAULTTABVALUE), BM_SETCHECK, useDefaultTab, 0);
+
+							int size = useDefaultTab ? nppGUI._tabSize : lang->_tabSize;
+							::SetDlgItemInt(_hSelf, IDC_EDIT_TABSIZEVAL, size, FALSE);
+							::SendMessage(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), BM_SETCHECK, useDefaultTab ? nppGUI._tabReplacedBySpace : lang->_isTabReplacedBySpace, 0);
+							::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), !useDefaultTab);
+							::EnableWindow(::GetDlgItem(_hSelf, IDC_EDIT_TABSIZEVAL), !useDefaultTab);
+
+							if (!useDefaultTab)
+							{
+								::SetDlgItemInt(_hSelf, IDC_EDIT_TABSIZEVAL, lang->_tabSize, FALSE);
+								::SendMessage(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), BM_SETCHECK, lang->_isTabReplacedBySpace, 0);
+							}
+						}
+						else
+						{
+							::SetDlgItemInt(_hSelf, IDC_EDIT_TABSIZEVAL, nppGUI._tabSize, FALSE);
+							::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), TRUE);
+							::EnableWindow(::GetDlgItem(_hSelf, IDC_EDIT_TABSIZEVAL), TRUE);
+							::SendMessage(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), BM_SETCHECK, nppGUI._tabReplacedBySpace, 0);
+						}
+
+						redrawDlgItem(IDC_TABSIZE_STATIC);
+
+						return TRUE;
+					}
+
+					break;
+				}
+
+				// Check if it is double click
+				case LBN_DBLCLK:
+				{
+					// Lang Menu
+					if (LOWORD(wParam) == IDC_LIST_DISABLEDLANG || LOWORD(wParam) == IDC_LIST_ENABLEDLANG)
+					{
+						// On double click an item, the item should be moved
+						// from one list to other list
+
+						HWND(lParam) == ::GetDlgItem(_hSelf, IDC_LIST_ENABLEDLANG) ?
+							::SendMessage(_hSelf, WM_COMMAND, IDC_BUTTON_REMOVE, 0) :
+							::SendMessage(_hSelf, WM_COMMAND, IDC_BUTTON_RESTORE, 0);
+						return TRUE;
+					}
+
+					// Tab setting - Double click is not used at this moment
+					/*else if (LOWORD(wParam) == IDC_LIST_TABSETTNG)
+					{
+					}*/
+
+					break;
+				}
+
+				case EN_CHANGE:
+				{
+					switch (LOWORD(wParam))
+					{
+						case IDC_EDIT_TABSIZEVAL:
+						{
+							const auto tabSize = ::GetDlgItemInt(_hSelf, IDC_EDIT_TABSIZEVAL, nullptr, FALSE);
+							if (tabSize < 1)
+							{
+								return FALSE;
+							}
+
+							const bool useDefaultTab = isCheckedOrNot(IDC_CHECK_DEFAULTTABVALUE);
+							const size_t index = ::SendDlgItemMessage(_hSelf, IDC_LIST_TABSETTNG, LB_GETCURSEL, 0, 0);
+							if (!useDefaultTab && index > 0)
+							{
+								Lang* lang = nppParam.getLangFromIndex(index - 1);
+								if (lang == nullptr)
+								{
+									return FALSE;
+								}
+
+								if (lang->_langID == L_JS)
+								{
+									Lang* ljs = nppParam.getLangFromID(L_JAVASCRIPT);
+									ljs->_tabSize = tabSize;
+								}
+								else if (lang->_langID == L_JAVASCRIPT)
+								{
+									Lang* ljavascript = nppParam.getLangFromID(L_JS);
+									ljavascript->_tabSize = tabSize;
+								}
+
+								lang->_tabSize = tabSize;
+
+								// write in langs.xml
+								nppParam.insertTabInfo(lang->getLangName(), lang->getTabInfo());
+							}
+							else
+							{
+								nppGUI._tabSize = tabSize;
+							}
+
+							::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_SETTING_TAB_SIZE, 0, 0);
+							return TRUE;
+						}
+
+						default:
+						{
+							break;
 						}
 					}
-					else
+					break;
+				}
+
+				case EN_KILLFOCUS:
+				{
+					switch (LOWORD(wParam))
 					{
-						::EnableWindow(::GetDlgItem(_hSelf, IDC_TABSIZE_STATIC), TRUE);
-						::EnableWindow(::GetDlgItem(_hSelf, IDC_TABSIZEVAL_STATIC), TRUE);
-						::ShowWindow(::GetDlgItem(_hSelf, IDC_TABSIZEVAL_STATIC), SW_SHOW);
-						::SetDlgItemInt(_hSelf, IDC_TABSIZEVAL_STATIC, nppGUI._tabSize, FALSE);
-						::ShowWindow(::GetDlgItem(_hSelf, IDC_TABSIZEVAL_DISABLE_STATIC), SW_HIDE);
-						::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), TRUE);
-						::SendMessage(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), BM_SETCHECK, nppGUI._tabReplacedBySpace, 0);
+						case IDC_EDIT_TABSIZEVAL:
+						{
+							const auto tabSize = ::GetDlgItemInt(_hSelf, IDC_EDIT_TABSIZEVAL, nullptr, FALSE);
+
+							if (tabSize < 1)
+							{
+								const bool useDefaultTab = isCheckedOrNot(IDC_CHECK_DEFAULTTABVALUE);
+								const size_t index = ::SendDlgItemMessage(_hSelf, IDC_LIST_TABSETTNG, LB_GETCURSEL, 0, 0);
+								auto prevSize = nppGUI._tabSize;
+								if (!useDefaultTab && index > 0)
+								{
+									Lang* lang = nppParam.getLangFromIndex(index - 1);
+									if (lang != nullptr && lang->_tabSize > 0)
+									{
+										prevSize = lang->_tabSize;
+									}
+								}
+
+								::SetDlgItemInt(_hSelf, IDC_EDIT_TABSIZEVAL, prevSize, FALSE);
+								return TRUE;
+							}
+							return FALSE;
+						}
+
+						default:
+						{
+							break;
+						}
 					}
-
-					return TRUE;
-				}
-            }
-
-			// Check if it is double click
-			else if (HIWORD(wParam) == LBN_DBLCLK)
-			{
-				// Lang Menu
-				if (LOWORD(wParam) == IDC_LIST_DISABLEDLANG || LOWORD(wParam) == IDC_LIST_ENABLEDLANG)
-				{
-					// On double click an item, the item should be moved
-					// from one list to other list
-
-					HWND(lParam) == ::GetDlgItem(_hSelf, IDC_LIST_ENABLEDLANG) ?
-						::SendMessage(_hSelf, WM_COMMAND, IDC_BUTTON_REMOVE, 0) :
-						::SendMessage(_hSelf, WM_COMMAND, IDC_BUTTON_RESTORE, 0);
-					return TRUE;
+					break;
 				}
 
-				// Tab setting - Double click is not used at this moment
-				/*else if (LOWORD(wParam) == IDC_LIST_TABSETTNG)
+				default:
 				{
-				}*/
+					break;
+				}
 			}
 
+
 			switch (wParam)
-            {
+			{
 				//
 				// Lang Menu
 				//
-				case IDC_CHECK_LANGMENUCOMPACT : 
+				case IDC_CHECK_LANGMENUCOMPACT:
 				{
 					nppGUI._isLangMenuCompact = (BST_CHECKED == ::SendMessage(::GetDlgItem(_hSelf, IDC_CHECK_LANGMENUCOMPACT), BM_GETCHECK, 0, 0));
-					::MessageBox(_hSelf, 
-						nppGUI._isLangMenuCompact?TEXT("This option will be enabled on the next launch."):TEXT("This option will be disabled on the next launch."), 
-						TEXT("Compact Language Menu"), MB_OK);
+					pNativeSpeaker->messageBox("LanguageMenuCompactWarning",
+						_hSelf,
+						TEXT("This option will be changed on the next launch."),
+						TEXT("Compact Language Menu"),
+						MB_OK);
 					return TRUE;
 				}
 				
@@ -2944,7 +3176,7 @@ intptr_t CALLBACK LanguageSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 						return TRUE;
 
 					const size_t sL = 31;
-					TCHAR s[sL + 1];
+					TCHAR s[sL + 1] = { '\0' };
 					auto lbTextLen = ::SendDlgItemMessage(_hSelf, list2Remove, LB_GETTEXTLEN, iRemove, 0);
 					if (static_cast<size_t>(lbTextLen) > sL)
 						return TRUE;
@@ -3014,56 +3246,6 @@ intptr_t CALLBACK LanguageSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 					return TRUE;
 				}
 
-				//
-				// Tab setting
-				//
-				case IDC_TABSIZEVAL_STATIC:
-				{
-					generic_string staticText = pNativeSpeaker->getLocalizedStrFromID("language-tabsize", TEXT("Tab Size: "));
-					ValueDlg tabSizeDlg;
-					tabSizeDlg.init(_hInst, _hParent, nppGUI._tabSize, staticText.c_str());
-					POINT p;
-					::GetCursorPos(&p);
-					int size = tabSizeDlg.doDialog(p);
-
-					//Tab size 0 removal
-					if (size <= 0) return FALSE;
-
-					::SetDlgItemInt(_hSelf, IDC_TABSIZEVAL_STATIC, size, FALSE);
-					::SetDlgItemInt(_hSelf, IDC_TABSIZEVAL_DISABLE_STATIC, size, FALSE);
-
-					auto index = ::SendDlgItemMessage(_hSelf, IDC_LIST_TABSETTNG, LB_GETCURSEL, 0, 0);
-					if (index == LB_ERR) return FALSE;
-
-					if (index != 0)
-					{
-						Lang *lang = nppParam.getLangFromIndex(index - 1);
-						if (!lang) return FALSE;
-						if (lang->_langID == L_JS)
-						{
-							Lang *ljs = nppParam.getLangFromID(L_JAVASCRIPT);
-							ljs->_tabSize = size;
-						}
-						else if (lang->_langID == L_JAVASCRIPT)
-						{
-							Lang *ljavascript = nppParam.getLangFromID(L_JS);
-							ljavascript->_tabSize = size;
-						}
-
-						lang->_tabSize = size;
-
-						// write in langs.xml
-						nppParam.insertTabInfo(lang->getLangName(), lang->getTabInfo());
-					}
-					else
-					{
-						nppGUI._tabSize = size;
-					}
-
-					::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_SETTING_TAB_SIZE, 0, 0);
-					return TRUE;
-				}
-
 				case IDC_CHECK_REPLACEBYSPACE:
 				{
 					bool isTabReplacedBySpace = BST_CHECKED == ::SendMessage(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), BM_GETCHECK, 0, 0);
@@ -3102,8 +3284,8 @@ intptr_t CALLBACK LanguageSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 
 				case IDC_CHECK_DEFAULTTABVALUE:
 				{
-					bool useDefaultTab = BST_CHECKED == ::SendMessage(::GetDlgItem(_hSelf, IDC_CHECK_DEFAULTTABVALUE), BM_GETCHECK, 0, 0);
-					auto index = ::SendDlgItemMessage(_hSelf, IDC_LIST_TABSETTNG, LB_GETCURSEL, 0, 0);
+					const bool useDefaultTab = isCheckedOrNot(IDC_CHECK_DEFAULTTABVALUE);
+					const auto index = ::SendDlgItemMessage(_hSelf, IDC_LIST_TABSETTNG, LB_GETCURSEL, 0, 0);
 					if (index == LB_ERR || index == 0) // index == 0 shouldn't happen
 						return FALSE;
 
@@ -3116,21 +3298,30 @@ intptr_t CALLBACK LanguageSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 					lang->_isTabReplacedBySpace = useDefaultTab ? false : nppGUI._tabReplacedBySpace;
 
 					//- set visual effect
-					::EnableWindow(::GetDlgItem(_hSelf, IDC_TABSIZE_STATIC), !useDefaultTab);
-					::SetDlgItemInt(_hSelf, IDC_TABSIZEVAL_STATIC, useDefaultTab ? nppGUI._tabSize : lang->_tabSize, FALSE);
-					::EnableWindow(::GetDlgItem(_hSelf, IDC_TABSIZEVAL_STATIC), !useDefaultTab);
-					::ShowWindow(::GetDlgItem(_hSelf, IDC_TABSIZEVAL_DISABLE_STATIC), useDefaultTab);
-					::ShowWindow(::GetDlgItem(_hSelf, IDC_TABSIZEVAL_STATIC), !useDefaultTab);
-					::SendMessage(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), BM_SETCHECK, useDefaultTab ? nppGUI._tabReplacedBySpace : lang->_isTabReplacedBySpace, 0);
+					::SetDlgItemInt(_hSelf, IDC_EDIT_TABSIZEVAL, useDefaultTab ? nppGUI._tabSize : lang->_tabSize, FALSE);
+					setChecked(IDC_CHECK_REPLACEBYSPACE, useDefaultTab ? nppGUI._tabReplacedBySpace : lang->_isTabReplacedBySpace);
 					::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_REPLACEBYSPACE), !useDefaultTab);
+					::EnableWindow(::GetDlgItem(_hSelf, IDC_EDIT_TABSIZEVAL), !useDefaultTab);
 
 					// write in langs.xml
 					if (useDefaultTab)
 						nppParam.insertTabInfo(lang->getLangName(), -1);
 
+					redrawDlgItem(IDC_TABSIZE_STATIC);
+
 					return TRUE;
 				}
+
+				default:
+				{
+					break;
+				}
 			}
+		}
+
+		default:
+		{
+			break;
 		}
 	}
 	return FALSE;
@@ -3166,17 +3357,18 @@ intptr_t CALLBACK HighlightingSubDlg::run_dlgProc(UINT message, WPARAM wParam, L
 			::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_SMARTHILITEUSEFINDSETTINGS), nppGUI._enableSmartHilite);
 			::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_SMARTHILITEANOTHERRVIEW), nppGUI._enableSmartHilite);
 
+			if (NppDarkMode::isEnabled())
+			{
+				::EnableWindow(::GetDlgItem(_hSelf, IDC_SMARTHILITEMATCHING_STATIC), nppGUI._enableSmartHilite);
+			}
+
 			return TRUE;
 		}
 
 		case WM_CTLCOLORDLG:
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_PRINTCLIENT:
@@ -3220,6 +3412,13 @@ intptr_t CALLBACK HighlightingSubDlg::run_dlgProc(UINT message, WPARAM wParam, L
 					::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_SMARTHILITEWHOLEWORDONLY), nppGUI._enableSmartHilite);
 					::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_SMARTHILITEUSEFINDSETTINGS), nppGUI._enableSmartHilite);
 					::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_SMARTHILITEANOTHERRVIEW), nppGUI._enableSmartHilite);
+
+					if (NppDarkMode::isEnabled())
+					{
+						::EnableWindow(::GetDlgItem(_hSelf, IDC_SMARTHILITEMATCHING_STATIC), nppGUI._enableSmartHilite);
+						redrawDlgItem(IDC_SMARTHILITEMATCHING_STATIC);
+					}
+
 					HWND grandParent = ::GetParent(_hParent);
 					::SendMessage(grandParent, NPPM_INTERNAL_CLEARINDICATOR, 0, 0);
 					return TRUE;
@@ -3405,35 +3604,23 @@ intptr_t CALLBACK PrintSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 
 			::SendDlgItemMessage(_hSelf, IDC_COMBO_VARLIST, CB_SETCURSEL, 0, 0);
 
-			break;
+			return TRUE;
 		}
 
 		case WM_CTLCOLOREDIT:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORLISTBOX:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColor(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColor(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_PRINTCLIENT:
@@ -3577,7 +3764,7 @@ intptr_t CALLBACK PrintSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 						if (!intStr[0])
 							*pVal = 0;
 						else
-							*pVal = generic_strtol(intStr, NULL, 10);
+							*pVal = wcstol(intStr, NULL, 10);
 					}
 					break;
 
@@ -3707,26 +3894,20 @@ intptr_t CALLBACK BackupSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 
 			::SendDlgItemMessage(_hSelf, IDC_BACKUPDIR_EDIT, WM_SETTEXT, 0, reinterpret_cast<LPARAM>((nppGUI._backupDir.c_str())));
 
-			updateBackupGUI();
+			updateBackupSessionGUI();
+			updateBackupOnSaveGUI();
+
 			return TRUE;
 		}
 
 		case WM_CTLCOLOREDIT:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORSTATIC:
@@ -3750,15 +3931,11 @@ intptr_t CALLBACK BackupSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 				return NppDarkMode::onCtlColorDarkerBGStaticText(hdcStatic, isTextEnabled);
 			}
 
-			if (NppDarkMode::isEnabled())
+			if (dlgCtrlID == IDD_BACKUPDIR_RESTORESESSION_PATH_EDIT)
 			{
-				if (dlgCtrlID == IDD_BACKUPDIR_RESTORESESSION_PATH_EDIT)
-				{
-					return NppDarkMode::onCtlColor(hdcStatic);
-				}
-				return NppDarkMode::onCtlColorDarker(hdcStatic);
+				return NppDarkMode::onCtlColor(hdcStatic);
 			}
-			return FALSE;
+			return NppDarkMode::onCtlColorDarker(hdcStatic);
 		}
 
 		case WM_PRINTCLIENT:
@@ -3835,13 +4012,13 @@ intptr_t CALLBACK BackupSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 						::SendDlgItemMessage(_hSelf, IDC_BACKUPDIR_RESTORESESSION_CHECK, BM_SETCHECK, BST_UNCHECKED, 0);
 						::SendMessage(_hSelf, WM_COMMAND, IDC_BACKUPDIR_RESTORESESSION_CHECK, 0);
 					}
-					updateBackupGUI();
+					updateBackupSessionGUI();
 					return TRUE;
 				}
 				case IDC_BACKUPDIR_RESTORESESSION_CHECK:
 				{
 					nppGUI._isSnapshotMode = BST_CHECKED == ::SendDlgItemMessage(_hSelf, IDC_BACKUPDIR_RESTORESESSION_CHECK, BM_GETCHECK, 0, 0);
-					updateBackupGUI();
+					updateBackupSessionGUI();
 
 					if (nppGUI._isSnapshotMode)
 					{
@@ -3854,28 +4031,28 @@ intptr_t CALLBACK BackupSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 				case IDC_RADIO_BKSIMPLE:
 				{
 					nppGUI._backup = bak_simple;
-					updateBackupGUI();
+					updateBackupOnSaveGUI();
 					return TRUE;
 				}
 
 				case IDC_RADIO_BKVERBOSE:
 				{
 					nppGUI._backup = bak_verbose;
-					updateBackupGUI();
+					updateBackupOnSaveGUI();
 					return TRUE;
 				}
 
 				case IDC_RADIO_BKNONE:
 				{
 					nppGUI._backup = bak_none;
-					updateBackupGUI();
+					updateBackupOnSaveGUI();
 					return TRUE;
 				}
 
 				case IDC_BACKUPDIR_CHECK:
 				{
 					nppGUI._useDir = !nppGUI._useDir;
-					updateBackupGUI();
+					updateBackupOnSaveGUI();
 					return TRUE;
 				}
 				case IDD_BACKUPDIR_BROWSE_BUTTON :
@@ -3896,7 +4073,7 @@ intptr_t CALLBACK BackupSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 	return FALSE;
 }
 
-void BackupSubDlg::updateBackupGUI()
+void BackupSubDlg::updateBackupSessionGUI()
 {
 	bool rememberSession = isCheckedOrNot(IDC_CHECK_REMEMBERSESSION);
 	bool isSnapshot = isCheckedOrNot(IDC_BACKUPDIR_RESTORESESSION_CHECK);
@@ -3904,6 +4081,13 @@ void BackupSubDlg::updateBackupGUI()
 	::EnableWindow(::GetDlgItem(_hSelf, IDC_BACKUPDIR_RESTORESESSION_EDIT), isSnapshot);
 	::EnableWindow(::GetDlgItem(_hSelf, IDD_BACKUPDIR_RESTORESESSION_PATH_EDIT), isSnapshot);
 
+	redrawDlgItem(IDD_BACKUPDIR_RESTORESESSION_STATIC1);
+	redrawDlgItem(IDD_BACKUPDIR_RESTORESESSION_STATIC2);
+	redrawDlgItem(IDD_BACKUPDIR_RESTORESESSION_PATHLABEL_STATIC);
+}
+
+void BackupSubDlg::updateBackupOnSaveGUI()
+{
 	bool noBackup = BST_CHECKED == ::SendDlgItemMessage(_hSelf, IDC_RADIO_BKNONE, BM_GETCHECK, 0, 0);
 	bool isEnableGlobableCheck = false;
 	bool isEnableLocalCheck = false;
@@ -3918,7 +4102,13 @@ void BackupSubDlg::updateBackupGUI()
 	::EnableWindow(::GetDlgItem(_hSelf, IDC_BACKUPDIR_EDIT), isEnableLocalCheck);
 	::EnableWindow(::GetDlgItem(_hSelf, IDD_BACKUPDIR_BROWSE_BUTTON), isEnableLocalCheck);
 
-	redraw();
+	// redrawDlgItem(IDD_BACKUPDIR_STATIC); // not needed, IDD_BACKUPDIR_STATIC rect is inside IDC_BACKUPDIR_USERCUSTOMDIR_GRPSTATIC rect
+
+	if (NppDarkMode::isEnabled())
+	{
+		::EnableWindow(::GetDlgItem(_hSelf, IDC_BACKUPDIR_USERCUSTOMDIR_GRPSTATIC), !noBackup);
+		redrawDlgItem(IDC_BACKUPDIR_USERCUSTOMDIR_GRPSTATIC);
+	}
 }
 
 
@@ -3930,9 +4120,13 @@ intptr_t CALLBACK AutoCompletionSubDlg::run_dlgProc(UINT message, WPARAM wParam,
 	{
 		case WM_INITDIALOG :
 		{
-			::SetDlgItemInt(_hSelf, IDD_AUTOC_STATIC_N,  static_cast<UINT>(nppGUI._autocFromLen), FALSE);
-			_nbCharVal.init(_hInst, _hSelf);
-			_nbCharVal.create(::GetDlgItem(_hSelf, IDD_AUTOC_STATIC_N), IDD_AUTOC_STATIC_N);
+			::SetDlgItemInt(_hSelf, IDD_AUTOC_STATIC_N,  nppGUI._autocFromLen, FALSE);
+
+			const HWND hNbCharSlider = ::GetDlgItem(_hSelf, IDC_AUTOC_CHAR_SLIDER);
+			::SendMessage(hNbCharSlider, TBM_SETRANGEMIN, TRUE, AUTOCOMPLETEFROMCHAR_SMALLEST);
+			::SendMessage(hNbCharSlider, TBM_SETRANGEMAX, TRUE, AUTOCOMPLETEFROMCHAR_LARGEST);
+			::SendMessage(hNbCharSlider, TBM_SETPAGESIZE, 0, AUTOCOMPLETEFROMCHAR_INTERVAL);
+			::SendMessage(hNbCharSlider, TBM_SETPOS, TRUE, nppGUI._autocFromLen);
 
 			bool isEnableAutoC = nppGUI._autocStatus != nppGUI.autoc_none;
 
@@ -3950,7 +4144,7 @@ intptr_t CALLBACK AutoCompletionSubDlg::run_dlgProc(UINT message, WPARAM wParam,
 
 			if (nppGUI._autocStatus == nppGUI.autoc_word || nppGUI._autocStatus == nppGUI.autoc_both)
 				::SendDlgItemMessage(_hSelf, IDD_AUTOC_IGNORENUMBERS, BM_SETCHECK, nppGUI._autocIgnoreNumbers ? BST_CHECKED : BST_UNCHECKED, 0);
-				
+
 			::SendDlgItemMessage(_hSelf, IDD_AUTOC_USEENTER, BM_SETCHECK, nppGUI._autocInsertSelectedUseENTER ? BST_CHECKED : BST_UNCHECKED, 0);
 			::SendDlgItemMessage(_hSelf, IDD_AUTOC_USETAB, BM_SETCHECK, nppGUI._autocInsertSelectedUseTAB ? BST_CHECKED : BST_UNCHECKED, 0);
 
@@ -3959,13 +4153,21 @@ intptr_t CALLBACK AutoCompletionSubDlg::run_dlgProc(UINT message, WPARAM wParam,
 			{
 				::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_FUNCRADIO), FALSE);
 				::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_WORDRADIO), FALSE);
+				::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_BRIEF_CHECK), FALSE);
 				::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_BOTHRADIO), FALSE);
 				::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_USEENTER), FALSE);
 				::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_USETAB), FALSE);
 				::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_IGNORENUMBERS), FALSE);
+				::EnableWindow(::GetDlgItem(_hSelf, IDC_AUTOC_CHAR_SLIDER), FALSE);
+
+				if (NppDarkMode::isEnabled())
+				{
+					::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_USEKEY_GRP_STATIC), FALSE);
+				}
 			}
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_MAINTAININDENT, BM_SETCHECK, nppGUI._maitainIndent, 0);
 
+			::SendDlgItemMessage(_hSelf, IDD_AUTOC_BRIEF_CHECK, BM_SETCHECK, nppGUI._autocBrief ? BST_CHECKED : BST_UNCHECKED, 0);
 			::SendDlgItemMessage(_hSelf, IDD_FUNC_CHECK, BM_SETCHECK, nppGUI._funcParams ? BST_CHECKED : BST_UNCHECKED, 0);
 
 			::SendDlgItemMessage(_hSelf, IDD_AUTOCPARENTHESES_CHECK, BM_SETCHECK, nppGUI._matchedPairConf._doParentheses?BST_CHECKED:BST_UNCHECKED, 0);
@@ -4002,10 +4204,10 @@ intptr_t CALLBACK AutoCompletionSubDlg::run_dlgProc(UINT message, WPARAM wParam,
 				nbMatchedPair = 3;
 			for (size_t i = 0; i < nbMatchedPair; ++i)
 			{
-				TCHAR openChar[2];
+				TCHAR openChar[2]{};
 				openChar[0] = nppGUI._matchedPairConf._matchedPairsInit[i].first;
 				openChar[1] = '\0';
-				TCHAR closeChar[2];
+				TCHAR closeChar[2]{};
 				closeChar[0] = nppGUI._matchedPairConf._matchedPairsInit[i].second;
 				closeChar[1] = '\0';
 
@@ -4031,44 +4233,32 @@ intptr_t CALLBACK AutoCompletionSubDlg::run_dlgProc(UINT message, WPARAM wParam,
 
 		case WM_CTLCOLOREDIT:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORSTATIC:
 		{
-			auto hdcStatic = reinterpret_cast<HDC>(wParam);
-			auto dlgCtrlID = ::GetDlgCtrlID(reinterpret_cast<HWND>(lParam));
+			const auto hdcStatic = reinterpret_cast<HDC>(wParam);
+			const auto dlgCtrlID = ::GetDlgCtrlID(reinterpret_cast<HWND>(lParam));
 
-			bool isStaticText = (dlgCtrlID == IDD_AUTOC_STATIC_FROM ||
+			const bool isStaticText = (dlgCtrlID == IDD_AUTOC_STATIC_FROM ||
 				dlgCtrlID == IDD_AUTOC_STATIC_CHAR ||
-				dlgCtrlID == IDD_AUTOC_STATIC_NOTE);
+				dlgCtrlID == IDD_AUTOC_STATIC_N ||
+				dlgCtrlID == IDD_AUTOC_SLIDER_MIN_STATIC ||
+				dlgCtrlID == IDD_AUTOC_SLIDER_MAX_STATIC);
 			//set the static text colors to show enable/disable instead of ::EnableWindow which causes blurry text
 			if (isStaticText)
 			{
-				bool isTextEnabled = isCheckedOrNot(IDD_AUTOC_ENABLECHECK);
-				auto result = NppDarkMode::onCtlColorDarkerBGStaticText(hdcStatic, isTextEnabled);
-				_nbCharVal.display(isTextEnabled);
-				return result;
+				const bool isTextEnabled = isCheckedOrNot(IDD_AUTOC_ENABLECHECK);
+				return NppDarkMode::onCtlColorDarkerBGStaticText(hdcStatic, isTextEnabled);
 			}
 
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(hdcStatic);
-			}
-			return FALSE;
+			return NppDarkMode::onCtlColorDarker(hdcStatic);
 		}
 
 		case WM_PRINTCLIENT:
@@ -4078,6 +4268,18 @@ intptr_t CALLBACK AutoCompletionSubDlg::run_dlgProc(UINT message, WPARAM wParam,
 				return TRUE;
 			}
 			break;
+		}
+
+		case WM_HSCROLL:
+		{
+			const HWND hNbCharSlider = ::GetDlgItem(_hSelf, IDC_AUTOC_CHAR_SLIDER);
+			if (hNbCharSlider == reinterpret_cast<HWND>(lParam))
+			{
+				nppGUI._autocFromLen = static_cast<UINT>(::SendMessage(hNbCharSlider, TBM_GETPOS, 0, 0));
+				::SetDlgItemInt(_hSelf, IDD_AUTOC_STATIC_N, nppGUI._autocFromLen, FALSE);
+			}
+
+			return 0; //return zero when handled
 		}
 
 		case WM_COMMAND : 
@@ -4143,6 +4345,8 @@ intptr_t CALLBACK AutoCompletionSubDlg::run_dlgProc(UINT message, WPARAM wParam,
 						::SendDlgItemMessage(_hSelf, IDD_AUTOC_FUNCRADIO, BM_SETCHECK, BST_UNCHECKED, 0);
 						::SendDlgItemMessage(_hSelf, IDD_AUTOC_WORDRADIO, BM_SETCHECK, BST_UNCHECKED, 0);
 						::SendDlgItemMessage(_hSelf, IDD_AUTOC_BOTHRADIO, BM_SETCHECK, BST_UNCHECKED, 0);
+						::SendDlgItemMessage(_hSelf, IDD_AUTOC_BRIEF_CHECK, BM_SETCHECK, BST_UNCHECKED, 0);
+						nppGUI._autocBrief = false;
 						nppGUI._autocStatus = nppGUI.autoc_none;
 
 						::SendDlgItemMessage(_hSelf, IDD_AUTOC_IGNORENUMBERS, BM_SETCHECK, BST_UNCHECKED, 0);
@@ -4151,12 +4355,25 @@ intptr_t CALLBACK AutoCompletionSubDlg::run_dlgProc(UINT message, WPARAM wParam,
 					::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_FUNCRADIO), isEnableAutoC);
 					::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_WORDRADIO), isEnableAutoC);
 					::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_BOTHRADIO), isEnableAutoC);
+					::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_BRIEF_CHECK), isEnableAutoC);
 					::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_USEKEY_GRP_STATIC), isEnableAutoC);
 					::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_USEENTER), isEnableAutoC);
 					::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_USETAB), isEnableAutoC);
 					::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_IGNORENUMBERS), isEnableAutoC);
+					::EnableWindow(::GetDlgItem(_hSelf, IDC_AUTOC_CHAR_SLIDER), isEnableAutoC);
 
-					redraw();
+					redrawDlgItem(IDD_AUTOC_STATIC_FROM);
+					redrawDlgItem(IDD_AUTOC_STATIC_N);
+					redrawDlgItem(IDD_AUTOC_STATIC_CHAR);
+					redrawDlgItem(IDD_AUTOC_SLIDER_MIN_STATIC);
+					redrawDlgItem(IDD_AUTOC_SLIDER_MAX_STATIC);
+
+					if (NppDarkMode::isEnabled())
+					{
+						::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_USEKEY_GRP_STATIC), isEnableAutoC);
+						redrawDlgItem(IDD_AUTOC_USEKEY_GRP_STATIC);
+					}
+
 					return TRUE;
 				}
 
@@ -4167,7 +4384,8 @@ intptr_t CALLBACK AutoCompletionSubDlg::run_dlgProc(UINT message, WPARAM wParam,
 					::SendDlgItemMessage(_hSelf, IDD_AUTOC_IGNORENUMBERS, BM_SETCHECK, BST_UNCHECKED, 0);
 					::EnableWindow(::GetDlgItem(_hSelf, IDD_AUTOC_IGNORENUMBERS), FALSE);
 					nppGUI._autocIgnoreNumbers = false;
-
+					::SendDlgItemMessage(_hSelf, IDD_AUTOC_BRIEF_CHECK, BM_SETCHECK, BST_UNCHECKED, 0);
+					nppGUI._autocBrief = false;
 					return TRUE;
 				}
 
@@ -4203,38 +4421,15 @@ intptr_t CALLBACK AutoCompletionSubDlg::run_dlgProc(UINT message, WPARAM wParam,
 					return TRUE;
 				}
 
+				case IDD_AUTOC_BRIEF_CHECK :
+				{
+					nppGUI._autocBrief = isCheckedOrNot(static_cast<int32_t>(wParam));
+					return TRUE;
+				}
+
 				case IDD_FUNC_CHECK :
 				{
 					nppGUI._funcParams = isCheckedOrNot(static_cast<int32_t>(wParam));
-					return TRUE;
-				}
-				
-				case IDD_AUTOC_STATIC_N :
-				{
-					const int NB_MIN_CHAR = 1;
-					const int NB_MAX_CHAR = 9;
-
-					NativeLangSpeaker *pNativeSpeaker = nppParam.getNativeLangSpeaker();
-					generic_string strNbChar = pNativeSpeaker->getLocalizedStrFromID("autocomplete-nb-char", TEXT("Nb char : "));
-
-					ValueDlg valDlg;
-					valDlg.init(NULL, _hSelf, static_cast<int32_t>(nppGUI._autocFromLen), strNbChar.c_str());
-					valDlg.setNBNumber(1);
-
-					POINT p;
-					::GetCursorPos(&p);
-
-					int size = valDlg.doDialog(p);
-					if (size != -1)
-					{
-						if (size > NB_MAX_CHAR)
-							size = NB_MAX_CHAR;
-						else if (size < NB_MIN_CHAR)
-							size = NB_MIN_CHAR;
-						
-						nppGUI._autocFromLen = size;
-						::SetDlgItemInt(_hSelf, IDD_AUTOC_STATIC_N, static_cast<int32_t>(nppGUI._autocFromLen), FALSE);
-					}
 					return TRUE;
 				}
 
@@ -4297,6 +4492,20 @@ intptr_t CALLBACK MultiInstanceSubDlg::run_dlgProc(UINT message, WPARAM wParam, 
 	{
 		case WM_INITDIALOG :
 		{
+			auto checkOrUncheckBtn = [this](int id, bool check) -> void
+			{
+				::SendDlgItemMessage(_hSelf, id, BM_SETCHECK, check ? BST_CHECKED : BST_UNCHECKED, 0);
+			};
+
+			checkOrUncheckBtn(IDC_CHECK_CLIPBOARDHISTORY, nppGUI._clipboardHistoryPanelKeepState);
+			checkOrUncheckBtn(IDC_CHECK_DOCLIST, nppGUI._docListKeepState);
+			checkOrUncheckBtn(IDC_CHECK_CHARPANEL, nppGUI._charPanelKeepState);
+			checkOrUncheckBtn(IDC_CHECK_FILEBROWSER, nppGUI._fileBrowserKeepState);
+			checkOrUncheckBtn(IDC_CHECK_PROJECTPANEL, nppGUI._projectPanelKeepState);
+			checkOrUncheckBtn(IDC_CHECK_DOCMAP, nppGUI._docMapKeepState);
+			checkOrUncheckBtn(IDC_CHECK_FUNCLIST, nppGUI._funcListKeepState);
+			checkOrUncheckBtn(IDC_CHECK_PLUGINPANEL, nppGUI._pluginPanelKeepState);
+
 			MultiInstSetting multiInstSetting = nppGUI._multiInstSetting;
 
 			::SendDlgItemMessage(_hSelf, IDC_SESSIONININST_RADIO, BM_SETCHECK, multiInstSetting == multiInstOnSession?BST_CHECKED:BST_UNCHECKED, 0);
@@ -4308,26 +4517,19 @@ intptr_t CALLBACK MultiInstanceSubDlg::run_dlgProc(UINT message, WPARAM wParam, 
 			::SetDlgItemText(_hSelf, IDC_DATETIMEFORMAT_EDIT, nppGUI._dateTimeFormat.c_str());
 			generic_string datetimeStr = getDateTimeStrFrom(nppGUI._dateTimeFormat, _BTTF_time);
 			::SetDlgItemText(_hSelf, IDD_DATETIMEFORMAT_RESULT_STATIC, datetimeStr.c_str());
+
+			return TRUE;
 		}
-		break;
 
 		case WM_CTLCOLOREDIT:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_PRINTCLIENT:
@@ -4376,6 +4578,54 @@ intptr_t CALLBACK MultiInstanceSubDlg::run_dlgProc(UINT message, WPARAM wParam, 
 				case IDD_DATETIMEFORMAT_REVERSEORDER_CHECK:
 				{
 					nppGUI._dateTimeReverseDefaultOrder = isCheckedOrNot(IDD_DATETIMEFORMAT_REVERSEORDER_CHECK);
+				}
+				break;
+
+				case IDC_CHECK_CLIPBOARDHISTORY:
+				{
+					nppGUI._clipboardHistoryPanelKeepState = isCheckedOrNot(IDC_CHECK_CLIPBOARDHISTORY);
+				}
+				break;
+
+				case IDC_CHECK_DOCLIST:
+				{
+					nppGUI._docListKeepState = isCheckedOrNot(IDC_CHECK_DOCLIST);
+				}
+				break;
+
+				case IDC_CHECK_CHARPANEL:
+				{
+					nppGUI._charPanelKeepState = isCheckedOrNot(IDC_CHECK_CHARPANEL);
+				}
+				break;
+
+				case IDC_CHECK_FILEBROWSER:
+				{
+					nppGUI._fileBrowserKeepState = isCheckedOrNot(IDC_CHECK_FILEBROWSER);
+				}
+				break;
+
+				case IDC_CHECK_PROJECTPANEL:
+				{
+					nppGUI._projectPanelKeepState = isCheckedOrNot(IDC_CHECK_PROJECTPANEL);
+				}
+				break;
+
+				case IDC_CHECK_DOCMAP:
+				{
+					nppGUI._docMapKeepState = isCheckedOrNot(IDC_CHECK_DOCMAP);
+				}
+				break;
+
+				case IDC_CHECK_FUNCLIST:
+				{
+					nppGUI._funcListKeepState = isCheckedOrNot(IDC_CHECK_FUNCLIST);
+				}
+				break;
+
+				case IDC_CHECK_PLUGINPANEL:
+				{
+					nppGUI._pluginPanelKeepState = isCheckedOrNot(IDC_CHECK_PLUGINPANEL);
 				}
 				break;
 
@@ -4566,9 +4816,6 @@ intptr_t CALLBACK DelimiterSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPAR
 			_tip = CreateToolTip(IDD_WORDCHAR_QUESTION_BUTTON, _hSelf, _hInst, const_cast<PTSTR>(tip2show.c_str()), pNativeSpeaker->isRTL());
 			if (_tip)
 			{
-				SendMessage(_tip, TTM_ACTIVATE, TRUE, 0);
-				SendMessage(_tip, TTM_SETMAXTIPWIDTH, 0, 200);
-
 				// Make tip stay 30 seconds
 				SendMessage(_tip, TTM_SETDELAYTIME, TTDT_AUTOPOP, MAKELPARAM((30000), (0)));
 			}
@@ -4577,25 +4824,12 @@ intptr_t CALLBACK DelimiterSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPAR
 
 		case WM_CTLCOLOREDIT:
 		{
-			if (_tip)
-			{
-				NppDarkMode::setDarkTooltips(_tip, NppDarkMode::ToolTipsType::tooltip);
-			}
-
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORSTATIC:
@@ -4805,25 +5039,18 @@ intptr_t CALLBACK CloudAndLinkSubDlg::run_dlgProc(UINT message, WPARAM wParam, L
 			::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_CLICKABLELINK_NOUNDERLINE), linkEnable);
 			::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_CLICKABLELINK_FULLBOXMODE), linkEnable);
 			::EnableWindow(::GetDlgItem(_hSelf, IDC_URISCHEMES_EDIT), linkEnable);
+
+			return TRUE;
 		}
-		break;
 
 		case WM_CTLCOLOREDIT:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORSTATIC:
@@ -4839,11 +5066,7 @@ intptr_t CALLBACK CloudAndLinkSubDlg::run_dlgProc(UINT message, WPARAM wParam, L
 				return NppDarkMode::onCtlColorDarkerBGStaticText(hdcStatic, isTextEnabled);
 			}
 
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(hdcStatic);
-			}
-			return FALSE;
+			return NppDarkMode::onCtlColorDarker(hdcStatic);
 		}
 
 		case WM_PRINTCLIENT:
@@ -4908,7 +5131,7 @@ intptr_t CALLBACK CloudAndLinkSubDlg::run_dlgProc(UINT message, WPARAM wParam, L
 					::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_CLICKABLELINK_FULLBOXMODE), isChecked);
 					::EnableWindow(::GetDlgItem(_hSelf, IDC_URISCHEMES_EDIT), isChecked);
 
-					redraw();
+					redrawDlgItem(IDC_CLICKABLELINK_STATIC);
 
 					nppGUI._styleURL = isChecked ? urlUnderLineFg : urlDisable;
 					HWND grandParent = ::GetParent(_hParent);
@@ -4957,7 +5180,7 @@ intptr_t CALLBACK PerformanceSubDlg::run_dlgProc(UINT message , WPARAM wParam, L
 				if (lstrcmp(str, TEXT("")) == 0)
 					return TRUE;
 				
-				size_t fileLenInMB = ::GetDlgItemInt(_hSelf, IDC_EDIT_PERFORMANCE_FILESIZE, NULL, FALSE);
+				int64_t fileLenInMB = ::GetDlgItemInt(_hSelf, IDC_EDIT_PERFORMANCE_FILESIZE, NULL, FALSE);
 
 				if (fileLenInMB > 4096)
 				{
@@ -4986,7 +5209,7 @@ intptr_t CALLBACK PerformanceSubDlg::run_dlgProc(UINT message , WPARAM wParam, L
 					return TRUE;
 				}
 
-				size_t fileLenInMB = ::GetDlgItemInt(_hSelf, IDC_EDIT_PERFORMANCE_FILESIZE, NULL, FALSE);
+				int64_t fileLenInMB = ::GetDlgItemInt(_hSelf, IDC_EDIT_PERFORMANCE_FILESIZE, NULL, FALSE);
 
 				if (fileLenInMB == 0)
 				{
@@ -5023,25 +5246,18 @@ intptr_t CALLBACK PerformanceSubDlg::run_dlgProc(UINT message , WPARAM wParam, L
 			NativeLangSpeaker* pNativeSpeaker = (NppParameters::getInstance()).getNativeLangSpeaker();
 			generic_string enablePerfTip = pNativeSpeaker->getLocalizedStrFromID("largeFileRestriction-tip", TEXT("Some features may slow performance in large files. These features can be auto-disabled on opening a large file. You can customize them here.\n\nNOTE:\n1. Modifying options here requires re-open currently opened large files to get proper behavior.\n\n2. If \"Deactivate Word Wrap globally\" is checked and you open a large file, \"Word Wrap\" will be disabled for all files. You can re-enable it via menu \"View->Word Wrap\""));
 			_largeFileRestrictionTip = CreateToolTip(IDD_PERFORMANCE_TIP_QUESTION_BUTTON, _hSelf, _hInst, const_cast<PTSTR>(enablePerfTip.c_str()), false);
+
+			return TRUE;
 		}
-		break;
 
 		case WM_CTLCOLOREDIT:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORSTATIC:
@@ -5057,15 +5273,11 @@ intptr_t CALLBACK PerformanceSubDlg::run_dlgProc(UINT message , WPARAM wParam, L
 				return NppDarkMode::onCtlColorDarkerBGStaticText(hdcStatic, isTextEnabled);
 			}
 
-			if (NppDarkMode::isEnabled())
+			if (dlgCtrlID == IDC_EDIT_PERFORMANCE_FILESIZE)
 			{
-				if (dlgCtrlID == IDC_EDIT_PERFORMANCE_FILESIZE)
-				{
-					return NppDarkMode::onCtlColor(hdcStatic);
-				}
-				return NppDarkMode::onCtlColorDarker(hdcStatic);
+				return NppDarkMode::onCtlColor(hdcStatic);
 			}
-			return FALSE;
+			return NppDarkMode::onCtlColorDarker(hdcStatic);
 		}
 
 		case WM_PRINTCLIENT:
@@ -5093,7 +5305,8 @@ intptr_t CALLBACK PerformanceSubDlg::run_dlgProc(UINT message , WPARAM wParam, L
 					::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_PERFORMANCE_ALLOWCLICKABLELINK), largeFileRestrictionEnabled);
 					::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_PERFORMANCE_DEACTIVATEWORDWRAP), largeFileRestrictionEnabled);
 
-					redraw();
+					redrawDlgItem(IDC_STATIC_PERFORMANCE_FILESIZE);
+					redrawDlgItem(IDC_STATIC_PERFORMANCE_MB);
 
 					if (largeFileRestrictionEnabled)
 					{
@@ -5197,26 +5410,19 @@ intptr_t CALLBACK SearchEngineSubDlg::run_dlgProc(UINT message, WPARAM wParam, L
 
 			::SendDlgItemMessage(_hSelf, IDC_SEARCHENGINE_EDIT, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(nppGUI._searchEngineCustom.c_str()));
 			::EnableWindow(::GetDlgItem(_hSelf, IDC_SEARCHENGINE_EDIT), nppGUI._searchEngineChoice == nppGUI.se_custom);
+
+			return TRUE;
 		}
-		break;
 
 		case WM_CTLCOLOREDIT:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorSofter(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_CTLCOLORDLG:
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_PRINTCLIENT:
@@ -5293,17 +5499,14 @@ intptr_t CALLBACK SearchingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPAR
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_CONFIRMREPLOPENDOCS, BM_SETCHECK, nppGUI._confirmReplaceInAllOpenDocs, 0);
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_REPLACEANDSTOP, BM_SETCHECK, nppGUI._replaceStopsWithoutFindingNext, 0);
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_SHOWONCEPERFOUNDLINE, BM_SETCHECK, nppGUI._finderShowOnlyOneEntryPerFoundLine, 0);
+
+			return TRUE;
 		}
-		break;
 
 		case WM_CTLCOLORDLG:
 		case WM_CTLCOLORSTATIC:
 		{
-			if (NppDarkMode::isEnabled())
-			{
-				return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
-			}
-			break;
+			return NppDarkMode::onCtlColorDarker(reinterpret_cast<HDC>(wParam));
 		}
 
 		case WM_PRINTCLIENT:

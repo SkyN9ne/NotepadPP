@@ -29,6 +29,8 @@ struct sortCompareData {
   int sortDirection = 0;
 };
 
+LRESULT run_listViewProc(WNDPROC oldEditProc, HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+
 class VerticalFileSwitcher : public DockingDlgInterface {
 public:
 	VerticalFileSwitcher(): DockingDlgInterface(IDD_DOCLIST) {};
@@ -47,6 +49,8 @@ public:
 	//Activate document in scintilla by using the internal index
 	void activateDoc(TaskLstFnStatus *tlfs) const;
 
+	void closeDoc(TaskLstFnStatus *tlfs) const;
+
 	int newItem(BufferID bufferID, int iView){
 		return _fileListView.newItem(bufferID, iView);
 	};
@@ -63,6 +67,10 @@ public:
 		_fileListView.setItemIconStatus(bufferID) ;
 	};
 
+	void setItemColor(BufferID bufferID) {
+		_fileListView.setItemColor(bufferID);
+	};
+
 	generic_string getFullFilePath(size_t i) const {
 		return _fileListView.getFullFilePath(i);
 	};
@@ -77,14 +85,14 @@ public:
 	std::vector<SwitcherFileInfo> getSelectedFiles(bool reverse = false) const {
 		return _fileListView.getSelectedFiles(reverse);
 	};
-	
+
 	void startColumnSort();
-	
+
 	void reload(){
 		_fileListView.reload();
 		startColumnSort();
 	};
-	
+
 	void updateTabOrder(){
 		if (_lastSortingDirection == SORT_DIRECTION_NONE) {
 			_fileListView.reload();
@@ -93,21 +101,58 @@ public:
 
 	virtual void setBackgroundColor(COLORREF bgColour) {
 		_fileListView.setBackgroundColor(bgColour);
-    };
+		
+		auto r = GetRValue(bgColour);
+		auto g = GetGValue(bgColour);
+		auto b = GetBValue(bgColour);
+
+		constexpr int luminenceIncrementBy = 333; // 33.3 %
+
+		// main color is blue
+		// but difference must be high
+		// can have similar blue color as header
+		constexpr int difference = 12;
+		const auto bAdjusted = static_cast<BYTE>(std::max<int>(0, static_cast<int>(b) - difference));
+		if (bAdjusted > r && bAdjusted > g)
+		{
+			// using values from NppDarkMode.cpp
+			// from double calculatePerceivedLighness(COLORREF c)
+			// double luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+			// values multiplied by 1024 and then shift result by 10 - "fake" divide by 1024
+			// for performance
+			const auto grayscale = static_cast<BYTE>((r * 218 + g * 732 + b * 74) >> 10);
+			_bgColor = ::ColorAdjustLuma(RGB(grayscale, grayscale, grayscale), luminenceIncrementBy, TRUE);
+		}
+		else
+		{
+			_bgColor = ::ColorAdjustLuma(bgColour, luminenceIncrementBy, TRUE);
+		}
+	};
 
 	virtual void setForegroundColor(COLORREF fgColour) {
 		_fileListView.setForegroundColor(fgColour);
     };
 protected:
 	HMENU _hGlobalMenu = NULL;
-
 	virtual intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
 	void initPopupMenus();
 	void popupMenuCmd(int cmdID);
+
+	static LRESULT CALLBACK listViewStaticProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+		const auto dlg = (VerticalFileSwitcher*)(::GetWindowLongPtr(hwnd, GWLP_USERDATA));
+		return (run_listViewProc(dlg->_defaultListViewProc, hwnd, message, wParam, lParam));
+	};
 private:
 	bool colHeaderRClick = false;
 	int _lastSortingColumn = 0;
 	int _lastSortingDirection = SORT_DIRECTION_NONE;
 	VerticalFileSwitcherListView _fileListView;
 	HIMAGELIST _hImaLst = nullptr;
+	WNDPROC _defaultListViewProc = nullptr;
+
+	static COLORREF _bgColor;
+	static const UINT_PTR _fileSwitcherNotifySubclassID = 42;
+	static LRESULT listViewNotifyCustomDraw(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	static LRESULT CALLBACK FileSwitcherNotifySubclass(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+	void autoSubclassWindowNotify(HWND hParent);
 };

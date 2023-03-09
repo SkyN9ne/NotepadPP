@@ -1,18 +1,16 @@
 <?xml version="1.0" encoding="utf-8" ?>
-
 <!--
 	German localization for Notepad++
-	last modified: 2022-12-04 by schnurlos
 
-	Please e-mail errors, suggestions etc. to schnurlos@gmail.com or janschreiber(at)users.sf.net
+	Please report errors, suggestions etc. here: https://github.com/notepad-plus-plus/notepad-plus-plus/issues
 
 	The most recent version of this file can usually be downloaded from
 	https://github.com/notepad-plus-plus/notepad-plus-plus/blob/master/PowerEditor/installer/nativeLang/german.xml
-	http://www.should.keepfree.de/N++/german.xml.txt (rename to german.xml)
+	or a copy at http://www.should.keepfree.de/N++/german.xml.txt (rename to german.xml)
 -->
-
 <NotepadPlus>
-	<Native-Langue name="Deutsch" filename="german.xml" version="8.4.8">
+	<!-- basiert auf english.xml vom 24.02.2023 -->
+	<Native-Langue name="Deutsch" filename="german.xml" version="2023.02.28">
 		<Menu>
 			<Main>
 				<!-- Main Menu Entries -->
@@ -121,6 +119,7 @@
 					<Item id="42006" name="&amp;Löschen"/>
 					<Item id="42007" name="&amp;Alles auswählen"/>
 					<Item id="42020" name="Auswa&amp;hl beginnen/beenden"/>
+					<Item id="42089" name="Auswahl im Spaltenmodus beginnen/beenden"/>
 					<Item id="42084" name="Datum und Uhrzeit (kurz)"/>
 					<Item id="42085" name="Datum und Uhrzeit (lang)"/>
 					<Item id="42086" name="Datum und Uhrzeit (benutzerdefiniert)"/>
@@ -167,7 +166,7 @@
 					<Item id="42042" name="Leerzeichen und Tabulatoren am Zeilen&amp;anfang löschen"/>
 					<Item id="42043" name="Leerzeichen und Tabulatoren am Zeilenanfang &amp;und -ende löschen"/>
 					<Item id="42044" name="Zeilenumbrüche in Leerzeichen &amp;konvertieren"/>
-					<Item id="42045" name="&amp;Mehrfache Leerzeichen und Zeilenumbrüche entfernen"/>
+					<Item id="42045" name="Sowohl Leerzeichen, Tabulatoren und Zeilenu&amp;mbrüche entfernen"/>
 					<Item id="42046" name="Tabulatoren in &amp;Leerzeichen umwandeln"/>
 					<Item id="42054" name="Leerzeichen in &amp;Tabulatoren umwandeln (alle)"/>
 					<Item id="42053" name="Leerzeichen in Tabulatoren umwandeln (nur am &amp;Zeilenanfang)"/>
@@ -303,6 +302,7 @@
 					<Item id="44113" name="Farbe 3 anwenden"/>
 					<Item id="44114" name="Farbe 4 anwenden"/>
 					<Item id="44115" name="Farbe 5 anwenden"/>
+					<Item id="44130" name="Nicht druckbare Zeichen anzeigen"/>
 					<Item id="44032" name="Voll&amp;bild"/>
 					<Item id="44033" name="&amp;Standardgröße"/>
 					<Item id="44034" name="Immer im Vorder&amp;grund halten"/>
@@ -395,41 +395,41 @@
 			<Splitter>
 			</Splitter>
 			<TabBar>
-				<Item CMID="41003"  name="S&amp;chließen"/>
-				<Item CMID="0" name="Mehrere Tabs schließen"/>
-				<Item CMID="41005"  name="&amp;Alle Dateien bis auf die aktuelle schließen"/>
-				<Item CMID="41009" name="Dateien links von aktueller Datei schlie&amp;ßen"/>
-				<Item CMID="41018" name="Dateien rech&amp;ts von aktueller Datei schließen"/>
-				<Item CMID="41024" name="Alle unveränderten Dateien schließen"/>
-				<Item CMID="41006"  name="&amp;Speichern"/>
-				<Item CMID="41008"  name="Speichern &amp;unter …"/>
-				<Item CMID="1" name="Öffne in"/>
-				<Item CMID="41019" name="Ordner im E&amp;xplorer öffnen"/>
-				<Item CMID="41020" name="Kommandozeile im aktuellen &amp;Ordner öffnen"/>
-				<Item CMID="41025" name="Enthaltenden Ordner als Arbeitsbereich öffnen"/>
-				<Item CMID="41023" name="Im Standard-Betrachter öffnen"/>
-				<Item CMID="41017" name="Um&amp;benennen …"/>
-				<Item CMID="41016" name="L&amp;öschen"/>
-				<Item CMID="41014" name="Neu &amp;laden"/>
-				<Item CMID="41010"  name="&amp;Drucken …"/>
-				<Item CMID="42028" name="Sch&amp;reibschutz"/>
-				<Item CMID="42033" name="Schreibschutz au&amp;fheben"/>
-				<Item CMID="2" name="In Zwischenablage kopieren"/>
-				<Item CMID="42029"  name="Vollständigen Dateipfad &amp;kopieren"/>
-				<Item CMID="42030"  name="Nur Datei&amp;namen kopieren"/>
-				<Item CMID="42031"  name="Nur Verzeichnis&amp;pfad kopieren"/>
-				<Item CMID="3" name="Dokument verschieben"/>
-				<Item CMID="10001"  name="In zweite Ansicht &amp;verschieben"/>
-				<Item CMID="10002"  name="In zw&amp;eite Ansicht duplizieren"/>
-				<Item CMID="10003" name="In neue &amp;Instanz verschieben"/>
-				<Item CMID="10004" name="In neuer Instan&amp;z öffnen"/>
-				<Item CMID="4" name="Farbe auf Tab anwenden"/>
-				<Item CMID="44111" name="Farbe 1 anwenden"/>
-				<Item CMID="44112" name="Farbe 2 anwenden"/>
-				<Item CMID="44113" name="Farbe 3 anwenden"/>
-				<Item CMID="44114" name="Farbe 4 anwenden"/>
-				<Item CMID="44115" name="Farbe 5 anwenden"/>
-				<Item CMID="44110" name="Farbe entfernen"/>
+				<Item CMDID="41003"  name="S&amp;chließen"/>
+				<Item CMDID="0" name="Mehrere Tabs schließen"/>
+				<Item CMDID="41005"  name="&amp;Alle Dateien bis auf die aktuelle schließen"/>
+				<Item CMDID="41009" name="Dateien links von aktueller Datei schlie&amp;ßen"/>
+				<Item CMDID="41018" name="Dateien rech&amp;ts von aktueller Datei schließen"/>
+				<Item CMDID="41024" name="Alle unveränderten Dateien schließen"/>
+				<Item CMDID="41006"  name="&amp;Speichern"/>
+				<Item CMDID="41008"  name="Speichern &amp;unter …"/>
+				<Item CMDID="1" name="Öffne in"/>
+				<Item CMDID="41019" name="Ordner im E&amp;xplorer öffnen"/>
+				<Item CMDID="41020" name="Kommandozeile im aktuellen &amp;Ordner öffnen"/>
+				<Item CMDID="41025" name="Enthaltenden Ordner als Arbeitsbereich öffnen"/>
+				<Item CMDID="41023" name="Im Standard-Betrachter öffnen"/>
+				<Item CMDID="41017" name="Um&amp;benennen …"/>
+				<Item CMDID="41016" name="L&amp;öschen"/>
+				<Item CMDID="41014" name="Neu &amp;laden"/>
+				<Item CMDID="41010"  name="&amp;Drucken …"/>
+				<Item CMDID="42028" name="Sch&amp;reibschutz"/>
+				<Item CMDID="42033" name="Schreibschutz au&amp;fheben"/>
+				<Item CMDID="2" name="In Zwischenablage kopieren"/>
+				<Item CMDID="42029"  name="Vollständigen Dateipfad &amp;kopieren"/>
+				<Item CMDID="42030"  name="Nur Datei&amp;namen kopieren"/>
+				<Item CMDID="42031"  name="Nur Verzeichnis&amp;pfad kopieren"/>
+				<Item CMDID="3" name="Dokument verschieben"/>
+				<Item CMDID="10001"  name="In zweite Ansicht &amp;verschieben"/>
+				<Item CMDID="10002"  name="In zw&amp;eite Ansicht duplizieren"/>
+				<Item CMDID="10003" name="In neue &amp;Instanz verschieben"/>
+				<Item CMDID="10004" name="In neuer Instan&amp;z öffnen"/>
+				<Item CMDID="4" name="Farbe auf Tab anwenden"/>
+				<Item CMDID="44111" name="Farbe 1 anwenden"/>
+				<Item CMDID="44112" name="Farbe 2 anwenden"/>
+				<Item CMDID="44113" name="Farbe 3 anwenden"/>
+				<Item CMDID="44114" name="Farbe 4 anwenden"/>
+				<Item CMDID="44115" name="Farbe 5 anwenden"/>
+				<Item CMDID="44110" name="Farbe entfernen"/>
 			</TabBar>
 		</Menu>
 
@@ -537,7 +537,7 @@
 				<Item id="2"    name="Schließen"/>
 			</SHA256FromTextDlg>
 
-			<PluginsAdminDlg title="Plugin-Verwaltung" titleAvailable="Verfügbar" titleUpdates="Aktualisierungen" titleInstalled="Installiert">
+			<PluginsAdminDlg title="Plugin-Verwaltung" titleAvailable="Verfügbar" titleUpdates="Aktualisierungen" titleInstalled="Installiert" titleIncompatible="Inkompatibel">
 				<ColumnPlugin   name="Plugin"/>
 				<ColumnVersion  name="Version"/>
 				<Item id="5501" name="Suchen:"/>
@@ -599,6 +599,20 @@
 				<ScintillaCommandsTab name="Scintilla-Befehle"/>
 				<ConflictInfoOk name="Keine Konflikte mit dieser Tastenkombination."/>
 				<ConflictInfoEditing name="Keine Konflikte."/>
+				<WindowCategory name="Fenster"/>
+				<FileCategory name="Datei"/>
+				<EditCategory name="Bearbeiten"/>
+				<SearchCategory name="Suchen"/>
+				<ViewCategory name="Ansicht"/>
+				<FormatCategory name="Codierung"/>
+				<LangCategory name="Sprache"/>
+				<AboutCategory name="?"/>
+				<SettingCategory name="Einstellungen"/>
+				<ToolCategory name="Werkzeuge"/>
+				<ExecuteCategory name="Ausführen"/>
+				<ModifyContextMenu name="Ändern"/>
+				<DeleteContextMenu name="Löschen"/>
+				<ClearContextMenu name="Entfernen"/>
 				<MainCommandNames>
 					<Item id="41019" name="Ordner im Explorer öffnen"/>
 					<Item id="41020" name="Ordner in der Kommandozeile öffnen"/>
@@ -715,6 +729,7 @@
 				<Item id="20011" name="Transparenz"/>
 				<Item id="20015" name="Importieren …"/>
 				<Item id="20016" name="Exportieren …"/>
+				<Item id="20017" name="Abdocken"/>
 				<StylerDialog title="Stiloptionen für benutzerdefinierte Sprachen">
 					<Item id="25030" name="Schriftoptionen"/>
 					<Item id="25006" name="Vordergrundfarbe:"/>
@@ -929,10 +944,14 @@
 					<Item id="6653" name="Hintergrund hervorheben"/>
 					<Item id="6654" name="Rahmen"/>
 					<Item id="6655" name="Breite"/>
-					<Item id="6247" name="Zeilenende (CRLF)"/> <!-- Don't translate "(CRLF)" -->
+					<Item id="6247" name="Zeilenende EOL (CRLF)"/> <!-- Don't translate "(CRLF)" -->
 					<Item id="6248" name="Standard"/>
 					<Item id="6249" name="Klartext"/>
 					<Item id="6250" name="Benutzerdefinierte Farbe"/>
+					<Item id="6252" name="Nicht druckbare Zeichen"/>
+					<Item id="6254" name="Abkürzung"/>
+					<Item id="6255" name="Codepoint"/>
+					<Item id="6256" name="Benutzerdefinierte Farbe"/>
 				</Scintillas>
 
 				<DarkMode title="Dunkler Modus">
@@ -1008,7 +1027,7 @@ Mehrere Spaltenmarkierungen können definiert werden, indem die Zahlen durch Lee
 					<Item id="6413" name="Verzeichnis beim Öffnen/Speichern"/>
 					<Item id="6414" name="Wie aktuelle Datei"/>
 					<Item id="6415" name="Letztes Verzeichnis merken"/>
-					<Item id="6431" name="Alle Dateien im jeweiligen Verzeichnis öffnen anstelle des Start-Verzeichnisses"/>
+					<Item id="6431" name="Verzeichnis-Drag&amp;&amp;Drop öffnet alle enthaltenen Dateien statt &quot;Verzeichnis als Arbeitsbereich&quot; zu starten"/>
 				</DefaultDir>
 
 				<FileAssoc title="Dateiverknüpfungen">
@@ -1022,7 +1041,7 @@ Mehrere Spaltenmarkierungen können definiert werden, indem die Zahlen durch Lee
 					<Item id="6507" name="Sprachmenü verschachtelt darstellen"/>
 					<Item id="6508" name="Sprachmenü"/>
 					<Item id="6301" name="Tabulatoren"/>
-					<Item id="6302" name="Durch Leerzeichen ersetzen"/>
+					<Item id="6302" name="Ersetzt durch Leerzeichen"/>
 					<Item id="6303" name="Tabulatorbreite:"/>
 					<Item id="6510" name="Standard verwenden"/>
 					<Item id="6335" name="Backslash ist Escapezeichen für SQL"/>
@@ -1071,7 +1090,7 @@ Mehrere Spaltenmarkierungen können definiert werden, indem die Zahlen durch Lee
 					<Item id="6722" name="Rechte Seite:"/>
 					<Item id="6723" name="Hinzufügen"/>
 					<ComboBox id="6724">
-						<Element name="Dateipfad &amp; Name"/>
+						<Element name="Pfad &amp; Name"/>
 						<Element name="Dateiname"/>
 						<Element name="Dateipfad"/>
 						<Element name="Seite"/>
@@ -1129,12 +1148,12 @@ Mehrere Spaltenmarkierungen können definiert werden, indem die Zahlen durch Lee
 					<Item id="6810" name="Wortvervollständigung"/>
 					<Item id="6816" name="Wort- und Funktionsvervollständigung"/>
 					<Item id="6869" name="Auswahl einfügen"/>
-					<Item id="6870" name="Tab"/> <!-- TAB key on the keyboard, it's not necessary to translate it normally -->
-					<Item id="6871" name="Enter"/> <!-- ENTER key on the keyboard, it's not necessary to translate it normally -->
+					<Item id="6870" name="TAB"/> <!-- TAB key on the keyboard, it's not necessary to translate it normally -->
+					<Item id="6871" name="ENTER"/> <!-- ENTER key on the keyboard, it's not necessary to translate it normally -->
 					<Item id="6824" name="Zahlen ignorieren"/>
 					<Item id="6811" name="ab"/>
 					<Item id="6813" name="Zeichen"/>
-					<Item id="6814" name="(mögliche Werte: 1–9)"/>
+					<Item id="6872" name="Kurze Liste für Autovervollständigung"/>
 					<Item id="6815" name="Funktionsparameter anzeigen"/>
 					<Item id="6851" name="Klammern automatisch schließen"/>
 					<Item id="6857" name="HTML/XML-Tags"/>
@@ -1146,14 +1165,24 @@ Mehrere Spaltenmarkierungen können definiert werden, indem die Zahlen durch Lee
 				</AutoCompletion>
 
 				<MultiInstance title="Instanzen &amp; Datum">
-					<Item id="6151" name="Instanzen-Einstellungen"/>
+					<Item id="6151" name="Instanzen-Einstellungen *"/>
 					<Item id="6152" name="Sitzungsdateien in einer neuen Instanz öffnen (und die Sitzung beim Beenden automatisch speichern)"/>
-					<Item id="6153" name="Immer im Mehrinstanzmodus"/>
+					<Item id="6153" name="Immer im Mehrinstanzen-Modus"/>
 					<Item id="6154" name="Standard (nur eine Instanz)"/>
 					<Item id="6155" name="Nach Änderung der Einstellung muss Notepad++ neu gestartet werden."/>
 					<Item id="6171" name="Einfügen von Datum/Zeit anpassen"/>
-					<Item id="6175" name="Datum vor Zeit ausgeben(kurzes &amp;&amp; langes Format)"/>
+					<Item id="6175" name="Datum vor Zeit ausgeben (kurzes &amp;&amp; langes Format)"/>
 					<Item id="6172" name="Eigenes Format:"/>
+					<Item id="6181" name="Status Bedienfeld und [-nosession] *"/>
+					<Item id="6182" name="Merke Bedienfeld-Status (Bedienfeld ist geöffnet) in anderen Instanzen (Mehrinstanzen-Modus) oder beim Verwenden von Kommandozeilenparameter [-nosession]"/>
+					<Item id="6183" name="Verlauf der Zwischenablage"/>
+					<Item id="6184" name="Dokumentenliste"/>
+					<Item id="6185" name="Zeichen-Tabelle"/>
+					<Item id="6186" name="Aktuelles Verzeichnis"/>
+					<Item id="6187" name="Projektlisten"/>
+					<Item id="6188" name="Dokumentenmappe"/>
+					<Item id="6189" name="Funktionsliste"/>
+					<Item id="6190" name="Plugin-Liste"/>
 				</MultiInstance>
 
 				<Delimiter title="Trennzeichen">
@@ -1191,7 +1220,7 @@ Mehrere Spaltenmarkierungen können definiert werden, indem die Zahlen durch Lee
 				</Cloud>
 
 				<SearchEngine title="Suchmaschine">
-					<Item id="6271" name="Suchmaschine (für den Befehl &quot;Suche im Internet&quot;)"/>
+					<Item id="6271" name="Suchmaschine (für den Befehl 'Suche im Internet')"/>
 					<Item id="6272" name="DuckDuckGo"/>
 					<Item id="6273" name="Google"/>
 					<Item id="6274" name="Bing"/>
@@ -1288,7 +1317,7 @@ Diese Wahl kann jederzeit in den Einstellungen angepasst werden."/>
 				<Item id="4" name="Ja, immer"/>
 			</DoSaveAll> <!-- HowToReproduce: Check the 'Enable Save All confirm dialog' checkbox in Preference->MISC, now click 'Save all' -->
 		</Dialog>
-		<MessageBox> <!-- $INT_REPLACE$ is a place holder, don't translate it -->
+		<MessageBox> <!-- $INT_REPLACE$ and $STR_REPLACE$ are place holders, don't translate these place holders. -->
 			<ContextMenuXmlEditWarning title="Kontextmenü anpassen" message="Durch Bearbeiten der Datei 'contextMenu.xml' können Sie das Kontextmenü von Notepad++ anpassen.
 Nach dem Bearbeiten müssen Sie Notepad++ neu starten, damit die Änderungen wirksam werden."/>
 			<SaveCurrentModifWarning title="Änderungen speichern" message="Bitte speichern Sie Ihre Änderungen.
@@ -1316,7 +1345,18 @@ Ihre Einstellungen konnten nicht gespeichert werden. Bitte passen Sie die Einste
 			<DroppingFolderAsProjectModeWarning title="Ungültige Aktion" message="Es können entweder Dateien oder Verzeichnisse abgelegt werden, aber nicht beides zugleich, da das Programm im 'Verzeichnis als Projekt'-Modus ist.
 Um dies zu ändern aktivieren Sie die Option &quot;Alle Dateien im jeweiligen Verzeichnis öffnen anstelle des Start-Verzeichnisses&quot; im &quot;Standardverzeichnis&quot; Bereich des Optionen-Dialogs."/>
 			<SortingError title="Sortier-Fehler" message="Konnte nicht nummerisch sortieren wegen Zeile $INT_REPLACE$."/>
-			<ColumnModeTip title="Tip zum Spalten-Modus" message="Bitte &quot;Alt+Mauswahl&quot; oder &quot;Alt+Shift+Pfeiltaste&quot; verwenden um in den Spalten-Modus zu wechseln."/>
+			<ColumnModeTip title="Tipp zum Spalten-Modus" message="
+Es gibt 3 Möglichkeiten um in den Spaltenmodus zu wechseln:
+
+1. (Tastatur und Maus)  Alt-Taste beim Markieren mittels linker Maustaste gedrückt halten.
+
+2. (Tastatur)  Alt+Umschalttaste gedrückt halten und Pfeiltasten verwenden.
+
+3. (Tastatur oder Maus)
+      Setzen Sie den Cursor auf die gewünschte Position am Anfang des Spaltenblocks, dann
+       den Befehl &quot;Auswahl im Spaltenmodus beginnen/beenden&quot; ausführen.
+      Cursor an die gewünschte Position am Ende des Spaltenblocks bewegen, danach
+       erneut den Befehl &quot;Auswahl im Spaltenmodus beginnen/beenden&quot; ausführen."/>
 			<BufferInvalidWarning title="Speichern fehlgeschlagen" message="Konnte nicht speichern: Ungültiger Buffer."/>
 			<DoCloseOrNot title="Nicht existierende Datei behalten" message="Die Datei &quot;$STR_REPLACE$&quot; existiert nicht mehr.
 Soll die Datei im Editor behalten werden?"/>
@@ -1347,6 +1387,8 @@ Soll die Datei trotzdem geöffnet werden?"/>
 			<CreateNewFileOrNot title="Neue Datei erstellen" message="&quot;$STR_REPLACE$&quot; existiert nicht. Soll die Datei erstellt werden?"/>
 			<CreateNewFileError title="Neue Datei erstellen" message="Kann Datei &quot;$STR_REPLACE$&quot; nicht erstellen."/>
 			<OpenFileError title="Fehler" message="Kann Datei &quot;$STR_REPLACE$&quot; nicht öffnen."/>
+			<OpenFileNoFolderError title="Datei kann nicht geöffnet werden" message="Datei &quot;$STR_REPLACE1$&quot; kann nicht geöffnet werden:
+Das Verzeichnis &quot;$STR_REPLACE2$&quot; existiert nicht."/>
 			<FileBackupFailed title="Sicherung fehlgeschlagen" message="Die vorherige Version der Datei konnte nicht in das Sicherungsverzeichnis &quot;$STR_REPLACE$&quot; gespeichert werden.
 
 Soll die Datei trotzdem gespeichert werden?"/>
@@ -1387,6 +1429,9 @@ Fortsetzen?"/>
 			<NeedToRestartToLoadPlugins title="Notepad++ muss neu gestartet werden" message="Ein Neustart von Notepad++ ist zum Laden der Plugins erforderlich."/>
 			<ChangeHistoryEnabledWarning title="Notepad++ muss neu gestartet werden" message="Ein Neustart von Notepad++ ist für das Aktivieren der Änderungshistorie erforderlich."/> <!-- HowToReproduce: uncheck "Display Change History" via Preferences dialog "Marges/Border/Edge. -->
 			<WindowsSessionExit title="Notepad++ - Windows wird beendet" message="Windows wird beendet aber es gibt noch ungespeicherte Daten. Soll Notepad++ jetzt beendet werden?"/>
+			<LanguageMenuCompactWarning title="Verschachteltes Sprachmenü" message="Diese Änderung wird erst nach dem nächsten Start aktiv."/> <!-- HowToReproduce: toggle "Make language menu compact" via Preferences dialog "Language/Language Menu. -->
+			<SwitchUnsavedThemeWarning title="$STR_REPLACE$" message="Änderungen wurden nicht gespeichert.
+Möchten Sie die Änderung speichern, bevor Sie das Thema wechseln?"/> <!-- HowToReproduce: In the Style Configurator dialog change some theme and switch to other theme without saving. -->
 		</MessageBox>
 		<ClipboardHistory>
 			<PanelTitle name="Zwischenablage"/>
@@ -1396,6 +1441,7 @@ Fortsetzen?"/>
 			<ColumnName name="Name"/>
 			<ColumnExt name="Erw."/>
 			<ColumnPath name="Pfad"/>
+			<ListGroups name="Nach Ansicht gruppieren"/>
 		</DocList>
 		<WindowsDlg>
 			<ColumnName name="Name"/>
@@ -1491,7 +1537,7 @@ Fortsetzen?"/>
 			</Menus>
 		</ProjectManager>
 		<MiscStrings>
-			<!-- $INT_REPLACE$ and $STR_REPLACE$ are place holders, don't translate these place holders -->
+			<!-- $INT_REPLACE$ and $STR_REPLACE$ are place holders, don't translate these place holders. -->
 			<word-chars-list-tip value="Das erlaubt es, zusätzliche Zeichen zur Liste der Wortzeichen hinzuzufügen. Die Zeichen werden bei der Doppelklick-Auswahl oder mit der aktivierten Option &quot;Übereinstimmung mit ganzem Wort&quot; berücksichtigt."/>
 
 			<!-- Don't translate "(&quot;EOL custom color&quot;)" -->
@@ -1573,11 +1619,9 @@ Suche in allen Dateien, exkludiere alle Verzeichnisse log oder logs rekursiv:
 			<splitter-rotate-right value="Nach rechts drehen"/>
 			<recent-file-history-maxfile value="Max. Datei: "/>
 			<recent-file-history-customlength value="Länge: "/>
-			<language-tabsize value="Registergröße: "/>
 			<userdefined-title-new value="Neue Sprache erstellen …"/>
 			<userdefined-title-save value="Akt. Sprache speichern als …"/>
 			<userdefined-title-rename value="Akt. Sprache umbenennen"/>
-			<autocomplete-nb-char value="Anz. Zeichen: "/>
 			<edit-verticaledge-nb-col value="Anz. Spalten: "/>
 			<summary value="Übersicht"/>
 			<summary-filepath value="Ganzer Dateipfad: "/>
@@ -1590,6 +1634,8 @@ Suche in allen Dateien, exkludiere alle Verzeichnisse log oder logs rekursiv:
 			<summary-nbsel1 value=" gewählte Zeichen ("/>
 			<summary-nbsel2 value=" Bytes) in "/>
 			<summary-nbrange value=" Stufen"/>
+			<progress-cancel-button value="Abbrechen"/>
+			<progress-cancel-info value="Aktion wird abgebrochen, bitte warten..."/>
 			<find-in-files-progress-title value="Fortschritt für die Suche in Dateien …"/>
 			<replace-in-files-confirm-title value="Sind Sie sicher?"/>
 			<replace-in-files-confirm-directory value="Sind Sie sicher, dass alle Vorkommen ersetzt werden sollen in: "/>
@@ -1625,6 +1671,32 @@ ACHTUNG:
 1. Wenn Sie die Optionen hier ändern, müssen Sie die aktuell geöffneten großen Dateien erneut öffnen um die Änderung zu erhalten.
 
 2. Wenn &quot;Wortumbruch global deaktivieren&quot; aktiv ist und Sie eine große Datei öffnen, wird &quot;Wortumbruch&quot; für alle Dateien deaktiviert. Sie können das aber über das Menü &quot;Ansicht-&gt;Wortumbruch&quot; wieder aktivieren." />
+			<npcNote-tip value="Darstellung von ausgewählten &quot;Nicht-ASCII&quot; Leerzeichen und nicht druckbaren (Steuer-)Zeichen.
+
+HINWEIS:
+Einige Zeichen haben ggf. bereits eine Representation und sind daher schon sichtbar. Zeilen- und Absatztrennzeichen werden bereits standardmäßig durch eine entsprechende Abkürzung dargestellt.
+
+Die Verwendung der Darstellung deaktiviert die Zeicheneffekte im Text.
+
+Die vollständige Liste der verfügbaren Leerzeichen und nicht druckbaren Zeichen finden Sie im Benutzerhandbuch.
+
+Ein Klick hier öffnet die Webseite des Benutzerhandbuches." />
+			<npcAbbreviation-tip value="Abkürzung : Name
+NBSP : geschütztes Leerzeichen
+ZWSP : breitenloses Leerzeichen
+ZWNBSP : geschütztes Leerzeichen ohne eigene Breite
+
+Die vollständige Liste finden Sie im Benutzerhandbuch.
+Ein Klick auf &quot;?&quot; öffnet die Webseite des Benutzerhandbuchs." />
+            <npcCodepoint-tip value="Codepoint : Name
+U+00A0 : geschütztes Leerzeichen
+U+200B : breitenloses Leerzeichen
+U+FEFF : geschütztes Leerzeichen ohne eigene Breite
+
+Die vollständige Liste finden Sie im Benutzerhandbuch.
+Ein Klick auf &quot;?&quot; öffnet die Webseite des Benutzerhandbuchs." />
+			<!-- Don't translate "(&quot;Non-printing characters custom color&quot;)" -->
+			<npcCustomColor-tip value="Im Stil-Konfigurator kann die Standardfarbe für die speziellen Leerzeichen und die nicht druckbaren Zeichen angepasst werden (&quot;Non-printing characters custom color&quot;)." />
 		</MiscStrings>
 	</Native-Langue>
 </NotepadPlus>

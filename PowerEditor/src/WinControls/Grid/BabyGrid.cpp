@@ -635,7 +635,7 @@ void DisplayColumn(HWND hWnd,int SI,int c,int offset,HFONT hfont,HFONT hcolumnhe
 			 {
 			   WPARAM wParam;
                buffer[0]=0x20;
-               BGHS[SI].ownerdrawitem = generic_atoi(buffer);
+               BGHS[SI].ownerdrawitem = _wtoi(buffer);
 			   wParam=MAKEWPARAM(::GetMenu(hWnd),BGN_OWNERDRAW);
 			   SendMessage(GetParent(hWnd), WM_COMMAND, wParam, reinterpret_cast<LPARAM>(&rect));
 			 }
@@ -1309,21 +1309,19 @@ void SizeGrid(HWND hWnd,int /*SI*/)
 
 int FindLongestLine(HDC hdc, wchar_t* text, SIZE* size)
 {
-	int longest = 0;
-	wchar_t temptext[1000];
-	wchar_t *p;
+    int longest = 0;
+    wchar_t* buffer = nullptr;
+    wchar_t* token = WCSTOK(text, TEXT("\n"), &buffer);;
 
-	wcscpy_s(temptext, text);
-    p = wcstok(temptext, TEXT("\n"));
-    while (p)
+    while (token)
     {
-        GetTextExtentPoint32(hdc, p, lstrlen(p), size);
+        ::GetTextExtentPoint32(hdc, token, lstrlen(token), size);
         if (size->cx > longest)
         {
              longest=size->cx;
         }
-		wchar_t temptext2[2] = {'\0'};
-        p = wcstok(temptext2, TEXT("\n"));
+
+        token = WCSTOK(nullptr, TEXT("\n"), &buffer);
     }
     return longest;
 }
@@ -1698,7 +1696,7 @@ LRESULT CALLBACK GridProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                             return TRUE;
                          SendMessage(BGHS[SelfIndex].hlist1, LB_GETTEXT, j - 1, reinterpret_cast<LPARAM>(buffer));
                          buffer[5]=0x00;
-                         j=generic_atoi(buffer);
+                         j=_wtoi(buffer);
                          if(j>SendMessage(hWnd,BGM_GETROWS,0,0))
                              {
                               SendMessage(hWnd,BGM_SETGRIDDIM,j,BGHS[SelfIndex].cols);
@@ -2204,7 +2202,7 @@ LRESULT CALLBACK GridProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 				 BGHS[SelfIndex].textcolor = RGB(0,0,0);
 				}
-
+			break;
         case WM_MOUSEMOVE:
               int x,y,r,c,t,z;
               x=LOWORD(lParam);

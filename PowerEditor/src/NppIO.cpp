@@ -185,7 +185,7 @@ BufferID Notepad_plus::doOpen(const generic_string& fileName, bool isRecursive, 
 	{
 		// TODO:
 		// for the raw filenames we can allow even the usually unsupported filenames in the future,
-		// but not now as it is not fully supported by the N++ COM IFileDialog based Open/SaveAs dialogs
+		// but not now as it is not fully supported by the Notepad++ COM IFileDialog based Open/SaveAs dialogs
 		//if (isRawFileName)
 		//{
 		//	int answer = _nativeLangSpeaker.messageBox("OpenNonconformingWin32FileName",
@@ -200,7 +200,7 @@ BufferID Notepad_plus::doOpen(const generic_string& fileName, bool isRecursive, 
 		//}
 		//else
 		//{
-			// unsupported, use the existing N++ file dialog to report
+			// unsupported, use the existing Notepad++ file dialog to report
 			_nativeLangSpeaker.messageBox("OpenFileError",
 				_pPublicInterface->getHSelf(),
 				TEXT("Cannot open file \"$STR_REPLACE$\"."),
@@ -353,12 +353,22 @@ BufferID Notepad_plus::doOpen(const generic_string& fileName, bool isRecursive, 
 			}
 			else
 			{
-				generic_string str2display = TEXT("\"");
-				str2display += longFileName;
-				str2display += TEXT("\" cannot be opened:\nFolder \"");
-				str2display += longFileDir;
-				str2display += TEXT("\" doesn't exist.");
-				::MessageBox(_pPublicInterface->getHSelf(), str2display.c_str(), TEXT("Cannot open file"), MB_OK);
+				generic_string msg, title;
+				if (!_nativeLangSpeaker.getMsgBoxLang("OpenFileNoFolderError", title, msg))
+				{
+					title = TEXT("Cannot open file");
+					msg = TEXT("\"");
+					msg += longFileName;
+					msg += TEXT("\" cannot be opened:\nFolder \"");
+					msg += longFileDir;
+					msg += TEXT("\" doesn't exist.");
+				}
+				else
+				{
+					msg = stringReplace(msg, TEXT("$STR_REPLACE1$"), longFileName);
+					msg = stringReplace(msg, TEXT("$STR_REPLACE2$"), longFileDir);
+				}
+				::MessageBox(_pPublicInterface->getHSelf(), msg.c_str(), title.c_str(), MB_OK);
 			}
 
 			if (!isCreateFileSuccessful)
@@ -795,6 +805,8 @@ void Notepad_plus::doClose(BufferID id, int whichOne, bool doDeleteBackup)
 		if (!isBufRemoved && hiddenBufferID != BUFFER_INVALID && _pDocumentListPanel)
 			_pDocumentListPanel->closeItem(hiddenBufferID, whichOne);
 	}
+
+	checkSyncState();
 
 	// Notify plugins that current file is closed
 	if (isBufRemoved)
@@ -1609,7 +1621,7 @@ bool Notepad_plus::fileSave(BufferID id)
 				today = localtime(&ltime);
 				if (today)
 				{
-					generic_strftime(tmpbuf, temBufLen, TEXT("%Y-%m-%d_%H%M%S"), today);
+					wcsftime(tmpbuf, temBufLen, L"%Y-%m-%d_%H%M%S", today);
 
 					fn_bak += name;
 					fn_bak += TEXT(".");
@@ -1989,7 +2001,7 @@ void Notepad_plus::fileOpen()
 	size_t sz = fns.size();
 	for (size_t i = 0 ; i < sz ; ++i)
 	{
-		BufferID test = doOpen(fns.at(i).c_str(), fDlg.isReadOnly());
+		BufferID test = doOpen(fns.at(i).c_str(), false, fDlg.isReadOnly());
 		if (test != BUFFER_INVALID)
 			lastOpened = test;
 	}
@@ -2034,7 +2046,7 @@ bool Notepad_plus::isFileSession(const TCHAR * filename)
 		}
 		usrSessionExt += definedSessionExt;
 
-		if (!generic_stricmp(pExt, usrSessionExt.c_str()))
+		if (!wcsicmp(pExt, usrSessionExt.c_str()))
 		{
 			return true;
 		}
@@ -2058,7 +2070,7 @@ bool Notepad_plus::isFileWorkspace(const TCHAR * filename)
 		}
 		usrWorkspaceExt += definedWorkspaceExt;
 
-		if (!generic_stricmp(pExt, usrWorkspaceExt.c_str()))
+		if (!wcsicmp(pExt, usrWorkspaceExt.c_str()))
 		{
 			return true;
 		}
@@ -2286,6 +2298,8 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, bool shou
 			if (isSnapshotMode && session._subViewFiles[k]._backupFilePath != TEXT("") && PathFileExists(session._subViewFiles[k]._backupFilePath.c_str()))
 				buf->setDirty(true);
 
+			_subDocTab.setIndividualTabColour(lastOpened, session._subViewFiles[k]._individualTabColour);
+
 			//Force in the document so we can add the markers
 			//Don't use default methods because of performance
 			Document prevDoc = _subEditView.execute(SCI_GETDOCPOINTER);
@@ -2330,6 +2344,8 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, bool shou
 		hideView(otherView());
 	else if (canHideView(currentView()))
 		hideView(currentView());
+
+	checkSyncState();
 
 	if (_pDocumentListPanel)
 		_pDocumentListPanel->reload();

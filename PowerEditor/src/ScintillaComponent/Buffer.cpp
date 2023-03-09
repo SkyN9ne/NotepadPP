@@ -672,6 +672,9 @@ void FileManager::closeBuffer(BufferID id, ScintillaEditView * identifier)
 // backupFileName is sentinel of backup mode: if it's not NULL, then we use it (load it). Otherwise we use filename
 BufferID FileManager::loadFile(const TCHAR* filename, Document doc, int encoding, const TCHAR* backupFileName, FILETIME fileNameTimestamp)
 {
+	if (!filename)
+		return BUFFER_INVALID;
+
 	//Get file size
 	int64_t fileSize = -1;
 	const TCHAR* pPath = filename;
@@ -682,7 +685,7 @@ BufferID FileManager::loadFile(const TCHAR* filename, Document doc, int encoding
 
 	if (pPath)
 	{
-		FILE* fp = generic_fopen(pPath, TEXT("rb"));
+		FILE* fp = _wfopen(pPath, TEXT("rb"));
 		if (fp)
 		{
 			_fseeki64(fp, 0, SEEK_END);
@@ -754,7 +757,7 @@ BufferID FileManager::loadFile(const TCHAR* filename, Document doc, int encoding
 	if (res)
 	{
 		Buffer* newBuf = new Buffer(this, _nextBufferID, doc, DOC_REGULAR, fullpath, isLargeFile);
-		BufferID id = static_cast<BufferID>(newBuf);
+		BufferID id = newBuf;
 		newBuf->_id = id;
 
 		if (backupFileName != NULL)
@@ -801,8 +804,6 @@ bool FileManager::reloadBuffer(BufferID id)
 	Document doc = buf->getDocument();
 	Utf8_16_Read UnicodeConvertor;
 
-	char* data = new char[blockSize + 8]; // +8 for incomplete multibyte char
-
 	LoadedFileFormat loadedFileFormat;
 	loadedFileFormat._encoding = buf->getEncoding();
 	loadedFileFormat._eolFormat = EolType::unknown;
@@ -811,14 +812,15 @@ bool FileManager::reloadBuffer(BufferID id)
 	buf->setLoadedDirty(false);	// Since the buffer will be reloaded from the disk, and it will be clean (not dirty), we can set _isLoadedDirty false safetly.
 								// Set _isLoadedDirty false before calling "_pscratchTilla->execute(SCI_CLEARALL);" in loadFileData() to avoid setDirty in SCN_SAVEPOINTREACHED / SCN_SAVEPOINTLEFT
 
-
 	//Get file size
-	FILE* fp = generic_fopen(buf->getFullPathName(), TEXT("rb"));
+	FILE* fp = _wfopen(buf->getFullPathName(), TEXT("rb"));
 	if (!fp)
 		return false;
 	_fseeki64(fp, 0, SEEK_END);
 	int64_t fileSize = _ftelli64(fp);
 	fclose(fp);
+	
+	char* data = new char[blockSize + 8]; // +8 for incomplete multibyte char
 
 	buf->_canNotify = false;	//disable notify during file load, we don't want dirty status to be triggered
 	bool res = loadFileData(doc, fileSize, buf->getFullPathName(), data, &UnicodeConvertor, loadedFileFormat);
@@ -1001,9 +1003,9 @@ bool FileManager::backupCurrentBuffer()
 				if (!today)
 					return false;
 
-				generic_strftime(tmpbuf, temBufLen, TEXT("%Y-%m-%d_%H%M%S"), today);
+				wcsftime(tmpbuf, temBufLen, L"%Y-%m-%d_%H%M%S", today);
 
-				backupFilePath += TEXT("@");
+				backupFilePath += L"@";
 				backupFilePath += tmpbuf;
 
 				// Set created file name in buffer
@@ -1015,7 +1017,7 @@ bool FileManager::backupCurrentBuffer()
 
 			TCHAR fullpath[MAX_PATH];
 			::GetFullPathName(backupFilePath.c_str(), MAX_PATH, fullpath, NULL);
-			if (_tcschr(fullpath, '~'))
+			if (wcschr(fullpath, '~'))
 			{
 				::GetLongPathName(fullpath, fullpath, MAX_PATH);
 			}
@@ -1036,7 +1038,7 @@ bool FileManager::backupCurrentBuffer()
 
 				if (encoding == -1) //no special encoding; can be handled directly by Utf8_16_Write
 				{
-					isWrittenSuccessful = UnicodeConvertor.writeFile(buf, static_cast<unsigned long>(lengthDoc));
+					isWrittenSuccessful = UnicodeConvertor.writeFile(buf, lengthDoc);
 					if (lengthDoc == 0)
 						isWrittenSuccessful = true;
 				}
@@ -1054,7 +1056,7 @@ bool FileManager::backupCurrentBuffer()
 						int incompleteMultibyteChar = 0;
 						const char *newData = wmc.encode(SC_CP_UTF8, encoding, buf+i, static_cast<int>(grabSize), &newDataLen, &incompleteMultibyteChar);
 						grabSize -= incompleteMultibyteChar;
-						isWrittenSuccessful = UnicodeConvertor.writeFile(newData, static_cast<unsigned long>(newDataLen));
+						isWrittenSuccessful = UnicodeConvertor.writeFile(newData, newDataLen);
 					}
 					if (lengthDoc == 0)
 						isWrittenSuccessful = true;
@@ -1170,7 +1172,7 @@ SavingStatus FileManager::saveBuffer(BufferID id, const TCHAR * filename, bool i
 
 		if (encoding == -1) //no special encoding; can be handled directly by Utf8_16_Write
 		{
-			isWrittenSuccessful = UnicodeConvertor.writeFile(buf, static_cast<unsigned long>(lengthDoc));
+			isWrittenSuccessful = UnicodeConvertor.writeFile(buf, lengthDoc);
 			if (lengthDoc == 0)
 				isWrittenSuccessful = true;
 		}
@@ -1194,7 +1196,7 @@ SavingStatus FileManager::saveBuffer(BufferID id, const TCHAR * filename, bool i
 					int incompleteMultibyteChar = 0;
 					const char* newData = wmc.encode(SC_CP_UTF8, encoding, buf + i, static_cast<int>(grabSize), &newDataLen, &incompleteMultibyteChar);
 					grabSize -= incompleteMultibyteChar;
-					isWrittenSuccessful = UnicodeConvertor.writeFile(newData, static_cast<unsigned long>(newDataLen));
+					isWrittenSuccessful = UnicodeConvertor.writeFile(newData, newDataLen);
 				}
 			}
 		}
@@ -1266,13 +1268,25 @@ size_t FileManager::nextUntitledNewNumber() const
 		Buffer *buf = _buffers.at(i);
 		if (buf->isUntitled())
 		{
-			// if untitled document is invisible, then don't put its number into array (so its number is available to be used)
-			if ((buf->_referees[0])->isVisible())
+			bool isVisible = false;
+			for (size_t k = 0; k < buf->_referees.size(); k++)
 			{
-				generic_string newTitle = ((NppParameters::getInstance()).getNativeLangSpeaker())->getLocalizedStrFromID("tab-untitled-string", UNTITLED_STR);
-				TCHAR *numberStr = buf->_fileName + newTitle.length();
-				int usedNumber = generic_atoi(numberStr);
-				usedNumbers.push_back(usedNumber);
+				if (buf->_referees[k]->isVisible())
+				{
+					isVisible = true;
+					break;
+				}
+			}
+
+			if (isVisible)
+			{
+				if (buf->indexOfReference(_pNotepadPlus->_pEditView) > -1 || buf->indexOfReference(_pNotepadPlus->_pNonEditView) > -1)
+				{
+					generic_string newTitle = ((NppParameters::getInstance()).getNativeLangSpeaker())->getLocalizedStrFromID("tab-untitled-string", UNTITLED_STR);
+					TCHAR* numberStr = buf->_fileName + newTitle.length();
+					int usedNumber = _wtoi(numberStr);
+					usedNumbers.push_back(usedNumber);
+				}
 			}
 		}
 	}
@@ -1319,7 +1333,7 @@ BufferID FileManager::newEmptyDocument()
 	const NewDocDefaultSettings& ndds = (nppParamInst.getNppGUI()).getNewDocDefaultSettings();
 	newBuf->_lang = ndds._lang;
 
-	BufferID id = static_cast<BufferID>(newBuf);
+	BufferID id = newBuf;
 	newBuf->_id = id;
 	_buffers.push_back(newBuf);
 	++_nbBufs;
@@ -1338,7 +1352,7 @@ BufferID FileManager::bufferFromDocument(Document doc, bool dontIncrease, bool d
 	if (!dontRef)
 		_pscratchTilla->execute(SCI_ADDREFDOCUMENT, 0, doc);	//set reference for FileManager
 	Buffer* newBuf = new Buffer(this, _nextBufferID, doc, DOC_UNNAMED, newTitle.c_str(), false);
-	BufferID id = static_cast<BufferID>(newBuf);
+	BufferID id = newBuf;
 	newBuf->_id = id;
 	const NewDocDefaultSettings& ndds = (nppParamInst.getNppGUI()).getNewDocDefaultSettings();
 	newBuf->_lang = ndds._lang;
@@ -1396,7 +1410,7 @@ LangType FileManager::detectLanguageFromTextBegining(const unsigned char *data, 
 	// Is there a \r or \n in the buffer? If so, truncate it
 	auto cr = buf2Test.find("\r");
 	auto nl = buf2Test.find("\n");
-	auto crnl = min(cr, nl);
+	auto crnl = std::min<size_t>(cr, nl);
 	if (crnl != std::string::npos && crnl < longestLength)
 		buf2Test = std::string((const char *)data + i, crnl);
 
@@ -1456,12 +1470,12 @@ LangType FileManager::detectLanguageFromTextBegining(const unsigned char *data, 
 
 bool FileManager::loadFileData(Document doc, int64_t fileSize, const TCHAR * filename, char* data, Utf8_16_Read * unicodeConvertor, LoadedFileFormat& fileFormat)
 {
-	FILE *fp = generic_fopen(filename, TEXT("rb"));
+	FILE *fp = _wfopen(filename, TEXT("rb"));
 	if (!fp)
 		return false;
 
 	// size/6 is the normal room Scintilla keeps for editing, but here we limit it to 1MiB when loading (maybe we want to load big files without editing them too much)
-	int64_t bufferSizeRequested = fileSize +min(1 << 20, fileSize / 6);
+	int64_t bufferSizeRequested = fileSize + std::min<int64_t>(1LL << 20, fileSize / 6);
 	
 	NppParameters& nppParam = NppParameters::getInstance();
 	NativeLangSpeaker* pNativeSpeaker = nppParam.getNativeLangSpeaker();
@@ -1636,11 +1650,14 @@ bool FileManager::loadFileData(Document doc, int64_t fileSize, const TCHAR * fil
 #endif
 				break;
 			case SC_STATUS_BADALLOC:
+			{
 				pNativeSpeaker->messageBox("FileTooBigToOpen",
 					_pNotepadPlus->_pEditView->getHSelf(),
 					TEXT("File is too big to be opened by Notepad++"),
 					TEXT("Exception: File size problem"),
 					MB_OK | MB_APPLMODAL);
+			}
+			[[fallthrough]];
 			case SC_STATUS_FAILURE:
 			default:
 				_stprintf_s(szException, _countof(szException), TEXT("%d (Scintilla)"), sciStatus);

@@ -244,7 +244,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 						itemUnitArray.push_back(MenuItemUnit(IDM_VIEW_GOTO_ANOTHER_VIEW, goToView));
 						itemUnitArray.push_back(MenuItemUnit(IDM_VIEW_CLONE_TO_ANOTHER_VIEW, cloneToView));
 						_tabPopupDropMenu.create(_pPublicInterface->getHSelf(), itemUnitArray, _mainMenuHandle);
-						_nativeLangSpeaker.changeLangTabDrapContextMenu(_tabPopupDropMenu.getMenuHandle());
+						_nativeLangSpeaker.changeLangTabDropContextMenu(_tabPopupDropMenu.getMenuHandle());
 					}
 					_tabPopupDropMenu.display(p);
 				}
@@ -267,9 +267,9 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 					quotFileName += _pEditView->getCurrentBuffer()->getFullPathName();
 					quotFileName += TEXT("\"");
 					COPYDATASTRUCT fileNamesData{};
-					fileNamesData.dwData = COPYDATA_FILENAMES;
+					fileNamesData.dwData = COPYDATA_FILENAMESW;
 					fileNamesData.lpData = (void *)quotFileName.c_str();
-					fileNamesData.cbData = long(quotFileName.length() + 1)*(sizeof(TCHAR));
+					fileNamesData.cbData = static_cast<DWORD>((quotFileName.length() + 1) * sizeof(TCHAR));
 
 					HWND hWinParent = ::GetParent(hWin);
 					const rsize_t classNameBufferSize = MAX_PATH;
@@ -1127,7 +1127,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 			if (_rebarBottom.getHSelf() == lpnm->hdr.hwndFrom)
 				notifRebar = &_rebarBottom;
 
-			//If N++ ID, use proper object
+			//If Notepad++ ID, use proper object
 			if (lpnm->wID == REBAR_BAR_TOOLBAR)
 			{
 				POINT pt{};

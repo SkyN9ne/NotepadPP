@@ -20,8 +20,6 @@
 #include "FunctionCallTip.h"
 #include "tinyxml.h"
 
-const size_t tagMaxLen = 256;
-
 class ScintillaEditView;
 
 struct MatchedCharInserted {
@@ -116,4 +114,15 @@ private:
 
 	const TCHAR * getApiFileName();
 	void getWordArray(std::vector<generic_string> & wordArray, TCHAR *beginChars, TCHAR *excludeChars);
+
+	// Type of autocomplete function
+	enum AutocompleteType {
+		autocFunc,
+		autocFuncAndWord,
+		autocFuncBrief,
+		autocWord
+	};
+
+	// AutoComplete code merged into 1 function 
+	bool showAutoComplete(AutocompleteType autocType, bool autoInsert);
 };

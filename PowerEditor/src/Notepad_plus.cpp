@@ -766,14 +766,39 @@ LRESULT Notepad_plus::init(HWND hwnd)
 	_dockingManager.setDockedContSize(CONT_TOP, nppGUI._dockingData._topHeight);
 	_dockingManager.setDockedContSize(CONT_BOTTOM, nppGUI._dockingData._bottomHight);
 
-	if (!nppGUI._isCmdlineNosessionActivated)
 	{
 		for (size_t i = 0, len = dmd._pluginDockInfo.size(); i < len; ++i)
 		{
 			PluginDlgDockingInfo& pdi = dmd._pluginDockInfo[i];
-			if (pdi._isVisible)
+			const bool isInternalFunc = pdi._name == NPP_INTERNAL_FUCTION_STR;
+
+			bool showPanel = true;
+			if (nppGUI._isCmdlineNosessionActivated)
 			{
-				if (pdi._name == NPP_INTERNAL_FUCTION_STR)
+				const bool showProjectPanel = isInternalFunc
+					&& nppGUI._projectPanelKeepState
+					&& (pdi._internalID != IDM_EDIT_CLIPBOARDHISTORY_PANEL
+						&& pdi._internalID != IDM_VIEW_DOCLIST
+						&& pdi._internalID != IDM_EDIT_CHAR_PANEL
+						&& pdi._internalID != IDM_VIEW_FILEBROWSER
+						&& pdi._internalID != IDM_VIEW_DOC_MAP
+						&& pdi._internalID != IDM_VIEW_FUNC_LIST);
+
+				const bool showInternalPanel = isInternalFunc
+					&& ((pdi._internalID == IDM_EDIT_CLIPBOARDHISTORY_PANEL && nppGUI._clipboardHistoryPanelKeepState)
+						|| (pdi._internalID == IDM_VIEW_DOCLIST && nppGUI._docListKeepState)
+						|| (pdi._internalID == IDM_EDIT_CHAR_PANEL && nppGUI._charPanelKeepState)
+						|| (pdi._internalID == IDM_VIEW_FILEBROWSER && nppGUI._fileBrowserKeepState)
+						|| (showProjectPanel)
+						|| (pdi._internalID == IDM_VIEW_DOC_MAP && nppGUI._docMapKeepState)
+						|| (pdi._internalID == IDM_VIEW_FUNC_LIST && nppGUI._funcListKeepState));
+
+				showPanel = ((!isInternalFunc && nppGUI._pluginPanelKeepState) || showInternalPanel);
+			}
+
+			if (pdi._isVisible && showPanel)
+			{
+				if (isInternalFunc)
 					_internalFuncIDs.push_back(pdi._internalID);
 				else
 					_pluginsManager.runPluginCommand(pdi._name.c_str(), pdi._internalID);
@@ -1064,7 +1089,7 @@ int Notepad_plus::getHtmlXmlEncoding(const TCHAR *fileName) const
 		return -1;
 
 	// Get the beginning of file data
-	FILE *f = generic_fopen(fileName, TEXT("rb"));
+	FILE *f = _wfopen(fileName, TEXT("rb"));
 	if (!f)
 		return -1;
 	const int blockSize = 1024; // To ensure that length is long enough to capture the encoding in html
@@ -1255,220 +1280,289 @@ bool Notepad_plus::replaceInOpenedFiles()
 	return true;
 }
 
-
 void Notepad_plus::wsTabConvert(spaceTab whichWay)
 {
+	// block selection is not supported
+	if ((_pEditView->execute(SCI_GETSELECTIONMODE) == SC_SEL_RECTANGLE) || (_pEditView->execute(SCI_GETSELECTIONMODE) == SC_SEL_THIN))
+		return;
+
 	intptr_t tabWidth = _pEditView->execute(SCI_GETTABWIDTH);
 	intptr_t currentPos = _pEditView->execute(SCI_GETCURRENTPOS);
-    intptr_t lastLine = _pEditView->lastZeroBasedLineNumber();
-	intptr_t docLength = _pEditView->execute(SCI_GETLENGTH) + 1;
-    if (docLength < 2)
-        return;
+	intptr_t currentLine = _pEditView->execute(SCI_LINEFROMPOSITION, currentPos);
+	intptr_t currentPosInLine = currentPos - _pEditView->execute(SCI_POSITIONFROMLINE, currentLine);
 
-    intptr_t count = 0;
-    intptr_t column = 0;
-    intptr_t newCurrentPos = 0;
-	intptr_t tabStop = tabWidth - 1;   // remember, counting from zero !
-    bool onlyLeading = false;
-    vector<int> bookmarks;
-    vector<int> folding;
+	intptr_t startLine = 0;
+	intptr_t endLine = _pEditView->lastZeroBasedLineNumber();
+	intptr_t endLineCorrect = endLine;
+	intptr_t dataLength = _pEditView->execute(SCI_GETLENGTH) + 1;
+	intptr_t mainSelAnchor = _pEditView->execute(SCI_GETANCHOR);
+	bool isEntireDoc = (mainSelAnchor == currentPos);
 
-    for (int i=0; i<lastLine; ++i)
-    {
-        if (bookmarkPresent(i))
-            bookmarks.push_back(i);
+	// restore original selection if nothing has changed
+	auto restoreSelection = [this, mainSelAnchor, currentPos, isEntireDoc]()
+	{
+		if (!isEntireDoc)
+		{
+			_pEditView->execute(SCI_SETANCHOR, mainSelAnchor);
+			_pEditView->execute(SCI_SETCURRENTPOS, currentPos);
+		}
+	};
 
-        if ((_pEditView->execute(SCI_GETFOLDLEVEL, i) & SC_FOLDLEVELHEADERFLAG))
-            if (_pEditView->execute(SCI_GETFOLDEXPANDED, i) == 0)
-                folding.push_back(i);
-    }
+	// auto-expand of partially selected lines
+	if (!isEntireDoc)
+	{
+		intptr_t startPos = _pEditView->execute(SCI_GETSELECTIONSTART);
+		startLine = _pEditView->execute(SCI_LINEFROMPOSITION, startPos);
+		intptr_t endPos = _pEditView->execute(SCI_GETSELECTIONEND);
+		endLine = endLineCorrect = _pEditView->execute(SCI_LINEFROMPOSITION, endPos);
 
-    char * source = new char[docLength];
-    if (source == NULL)
-        return;
-    _pEditView->execute(SCI_GETTEXT, docLength, reinterpret_cast<LPARAM>(source));
+		if (startPos != _pEditView->execute(SCI_POSITIONFROMLINE, startLine))
+			startPos = _pEditView->execute(SCI_POSITIONFROMLINE, startLine);
 
-    if (whichWay == tab2Space)
-    {
-        // count how many tabs are there
-        for (const char * ch=source; *ch; ++ch)
-        {
-            if (*ch == '\t')
-                ++count;
-        }
-        if (count == 0)
-        {
-            delete [] source;
-            return;
-        }
-    }
-    // allocate tabwidth-1 chars extra per tab, just to be safe
-    size_t newlen = docLength + count * (tabWidth - 1) + 1;
-    char * destination = new char[newlen];
-    if (destination == NULL)
-    {
-        delete [] source;
-        return;
-    }
-    char * dest = destination;
+		if (endPos == _pEditView->execute(SCI_POSITIONFROMLINE, endLine))
+			endLineCorrect = endLine - 1;
+		else if (endPos < _pEditView->execute(SCI_GETLINEENDPOSITION, endLine))
+			endPos = _pEditView->execute(SCI_GETLINEENDPOSITION, endLine);
 
-    switch (whichWay)
-    {
-        case tab2Space:
-        {
-            // rip through each line of the file
-            for (int i = 0; source[i] != '\0'; ++i)
-            {
-                if (source[i] == '\t')
-                {
-                    intptr_t insertTabs = tabWidth - (column % tabWidth);
-                    for (int j = 0; j < insertTabs; ++j)
-                    {
-                        *dest++ = ' ';
-                        if (i <= currentPos)
-                            ++newCurrentPos;
-                    }
-                    column += insertTabs;
-                }
-                else
-                {
-                    *dest++ = source[i];
-                    if (i <= currentPos)
-                        ++newCurrentPos;
-                    if ((source[i] == '\n') || (source[i] == '\r'))
-                        column = 0;
-                    else if ((source[i] & 0xC0) != 0x80)  // UTF_8 support: count only bytes that don't start with 10......
-                        ++column;
-                }
-            }
-            *dest = '\0';
-            break;
-        }
-        case space2TabLeading:
-        {
-            onlyLeading = true;
-        }
-        case space2TabAll:
-        {
-            bool nextChar = false;
-			int counter = 0;
-			bool nonSpaceFound = false;
-            for (int i=0; source[i] != '\0'; ++i)
-            {
-                if (nonSpaceFound == false)
-                {
-                    while (source[i + counter] == ' ')
-                    {
-                        if ((column + counter) == tabStop)
-                        {
-                            tabStop += tabWidth;
-                            if (counter >= 1)        // counter is counted from 0, so counter >= max-1
-                            {
-                                *dest++ = '\t';
-                                i += counter;
-                                column += counter + 1;
-                                counter = 0;
-                                nextChar = true;
-                                if (i <= currentPos)
-                                    ++newCurrentPos;
-                                break;
-                            }
-                            else if (source[i+1] == ' ' || source[i+1] == '\t')  // if followed by space or TAB, convert even a single space to TAB
-                            {
-                                *dest++ = '\t';
-                                i++;
-                                column += 1;
-                                counter = 0;
-                                if (i <= currentPos)
-                                    ++newCurrentPos;
-                            }
-                            else       // single space, don't convert it to TAB
-                            {
-                                *dest++ = source[i];
-                                column += 1;
-                                counter = 0;
-                                nextChar = true;
-                                if (i <= currentPos)
-                                    ++newCurrentPos;
-                                break;
-                            }
-                        }
-                        else
-                            ++counter;
-                    }
+		dataLength = endPos - startPos + 1;
+		_pEditView->execute(SCI_SETSEL, startPos, endPos);
+	}
 
-                    if (nextChar == true)
-                    {
-                        nextChar = false;
-                        continue;
-                    }
+	if (dataLength < 2)
+	{
+		restoreSelection();
+		return;
+	}
 
-                    if (source[i] == ' ' && source[i + counter] == '\t') // spaces "absorbed" by a TAB on the right
-                    {
-                        *dest++ = '\t';
-                        i += counter;
-                        column = tabStop + 1;
-                        tabStop += tabWidth;
-                        counter = 0;
-                        if (i <= currentPos)
-                            ++newCurrentPos;
-                        continue;
-                    }
-                }
+	intptr_t changeDataCount = 0;
+	intptr_t newCurrentPos = 0;
+	vector<intptr_t> folding;
 
-                if (onlyLeading == true && nonSpaceFound == false)
-                    nonSpaceFound = true;
+	_pEditView->execute(SCI_BEGINUNDOACTION);
 
-                if (source[i] == '\n' || source[i] == '\r')
-                {
-                    *dest++ = source[i];
-                    column = 0;
-                    tabStop = tabWidth - 1;
-                    nonSpaceFound = false;
-                }
-                else if (source[i] == '\t')
-                {
-                    *dest++ = source[i];
-                    column = tabStop + 1;
-                    tabStop += tabWidth;
-                    counter = 0;
-                }
-                else
-                {
-                    *dest++ = source[i];
-                    counter = 0;
-                    if ((source[i] & 0xC0) != 0x80)   // UTF_8 support: count only bytes that don't start with 10......
-                    {
-                        ++column;
+	for (intptr_t idx = startLine; idx < endLineCorrect + 1; ++idx)
+	{
+		intptr_t startPos = _pEditView->execute(SCI_POSITIONFROMLINE, idx);
+		intptr_t endPos = _pEditView->execute(SCI_GETLINEENDPOSITION, idx);
+		dataLength = endPos - startPos + 1;
 
-                        if (column > 0 && column % tabWidth == 0)
-                            tabStop += tabWidth;
-                    }
-                }
+		char * source = new char[dataLength];
+		if (source == NULL)
+			continue;
 
-                if (i <= currentPos)
-                    ++newCurrentPos;
-            }
-            *dest = '\0';
-            break;
-        }
-    }
+		source[dataLength - 1] = '\0'; // make sure to have correct data termination
+		_pEditView->execute(SCI_SETTARGETRANGE, startPos, endPos);
+		_pEditView->execute(SCI_GETTARGETTEXT, 0, reinterpret_cast<LPARAM>(source));
 
-    _pEditView->execute(SCI_BEGINUNDOACTION);
-	_pEditView->execute(SCI_SETTEXT, 0, reinterpret_cast<LPARAM>(destination));
-    _pEditView->execute(SCI_GOTOPOS, newCurrentPos);
+		intptr_t count = 0;
+		intptr_t column = 0;
+		intptr_t tabStop = tabWidth - 1;   // remember, counting from zero !
+		bool onlyLeading = false;
 
-    for (size_t i=0; i<bookmarks.size(); ++i)
-        _pEditView->execute(SCI_MARKERADD, bookmarks[i], MARK_BOOKMARK);
+		if (whichWay == tab2Space)
+		{
+			// count how many tabs are there
+			for (const char * ch = source; *ch; ++ch)
+			{
+				if (*ch == '\t')
+					++count;
+			}
+			if (count == 0)
+			{
+				delete [] source;
+				continue;
+			}
+		}
+		// allocate tabwidth-1 chars extra per tab, just to be safe
+		size_t newLen = dataLength + count * (tabWidth - 1) + 1;
+		char * destination = new char[newLen];
+		if (destination == NULL)
+		{
+			delete [] source;
+			continue;
+		}
+		char * dest = destination;
+		intptr_t changeDataLineCount = 0;
 
-    for (size_t i=0; i<folding.size(); ++i)
-        _pEditView->fold(folding[i], false);
+		switch (whichWay)
+		{
+			case tab2Space:
+			{
+				// rip through each line of the file
+				for (int i = 0; source[i] != '\0'; ++i)
+				{
+					if (source[i] == '\t')
+					{
+						intptr_t insertTabs = tabWidth - (column % tabWidth);
+						for (int j = 0; j < insertTabs; ++j)
+						{
+							*dest++ = ' ';
+							changeDataCount++;
+							changeDataLineCount++;
+							if (idx == currentLine && i < currentPosInLine)
+								++newCurrentPos;
+						}
+						column += insertTabs;
+					}
+					else
+					{
+						*dest++ = source[i];
+						if (idx == currentLine && i < currentPosInLine)
+							++newCurrentPos;
+						if ((source[i] == '\n') || (source[i] == '\r'))
+							column = 0;
+						else if ((source[i] & 0xC0) != 0x80)  // UTF_8 support: count only bytes that don't start with 10......
+							++column;
+					}
+				}
+				*dest = '\0';
+				break;
+			}
+			case space2TabLeading:
+			{
+				onlyLeading = true;
+			}
+			[[fallthrough]];
+			case space2TabAll:
+			{
+				bool nextChar = false;
+				int counter = 0;
+				bool nonSpaceFound = false;
+				for (int i = 0; source[i] != '\0'; ++i)
+				{
+					if (nonSpaceFound == false)
+					{
+						while (source[i + counter] == ' ')
+						{
+							if ((column + counter) == tabStop)
+							{
+								tabStop += tabWidth;
+								if (counter >= 1)        // counter is counted from 0, so counter >= max-1
+								{
+									*dest++ = '\t';
+									changeDataCount++;
+									changeDataLineCount++;
+									i += counter;
+									column += counter + 1;
+									counter = 0;
+									nextChar = true;
+									if (idx == currentLine && i <= currentPosInLine)
+										++newCurrentPos;
+									break;
+								}
+								else if (source[i + 1] == ' ' || source[i + 1] == '\t')  // if followed by space or TAB, convert even a single space to TAB
+								{
+									*dest++ = '\t';
+									changeDataCount++;
+									changeDataLineCount++;
+									i++;
+									column += 1;
+									counter = 0;
+									if (idx == currentLine && i <= currentPosInLine)
+										++newCurrentPos;
+								}
+								else       // single space, don't convert it to TAB
+								{
+									*dest++ = source[i];
+									column += 1;
+									counter = 0;
+									nextChar = true;
+									if (idx == currentLine && i <= currentPosInLine)
+										++newCurrentPos;
+									break;
+								}
+							}
+							else
+								++counter;
+						}
 
-    _pEditView->execute(SCI_ENDUNDOACTION);
+						if (nextChar == true)
+						{
+							nextChar = false;
+							continue;
+						}
 
-    // clean up
-    delete [] source;
-    delete [] destination;
+						if (source[i] == ' ' && source[i + counter] == '\t') // spaces "absorbed" by a TAB on the right
+						{
+							*dest++ = '\t';
+							changeDataCount++;
+							changeDataLineCount++;
+							i += counter;
+							column = tabStop + 1;
+							tabStop += tabWidth;
+							counter = 0;
+							if (idx == currentLine && i <= currentPosInLine)
+								++newCurrentPos;
+							continue;
+						}
+					}
+
+					if (onlyLeading == true && nonSpaceFound == false)
+						nonSpaceFound = true;
+
+					if (source[i] == '\n' || source[i] == '\r')
+					{
+						*dest++ = source[i];
+						column = 0;
+						tabStop = tabWidth - 1;
+						nonSpaceFound = false;
+					}
+					else if (source[i] == '\t')
+					{
+						*dest++ = source[i];
+						column = tabStop + 1;
+						tabStop += tabWidth;
+						counter = 0;
+					}
+					else
+					{
+						*dest++ = source[i];
+						counter = 0;
+						if ((source[i] & 0xC0) != 0x80)   // UTF_8 support: count only bytes that don't start with 10......
+						{
+							++column;
+
+							if (column > 0 && column % tabWidth == 0)
+								tabStop += tabWidth;
+						}
+					}
+
+					if (idx == currentLine && i < currentPosInLine)
+						++newCurrentPos;
+				}
+				*dest = '\0';
+				break;
+			}
+		}
+
+		if ((_pEditView->execute(SCI_GETFOLDLEVEL, idx) & SC_FOLDLEVELHEADERFLAG))
+			if (_pEditView->execute(SCI_GETFOLDEXPANDED, idx) == 0)
+				folding.push_back(idx);
+
+		if (changeDataLineCount)
+			_pEditView->execute(SCI_REPLACETARGET, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(destination));
+
+		// clean up
+		delete [] source;
+		delete [] destination;
+	
+	}
+
+	_pEditView->execute(SCI_ENDUNDOACTION);
+
+	if (changeDataCount)
+	{
+		if (!isEntireDoc)
+			_pEditView->execute(SCI_SETSEL, _pEditView->execute(SCI_POSITIONFROMLINE, startLine), endLineCorrect != endLine ? _pEditView->execute(SCI_POSITIONFROMLINE, endLine) : _pEditView->execute(SCI_GETLINEENDPOSITION, endLine));
+		else
+			_pEditView->execute(SCI_GOTOPOS, _pEditView->execute(SCI_POSITIONFROMLINE, currentLine) + newCurrentPos);
+
+		for (size_t i = 0; i < folding.size(); ++i)
+			_pEditView->fold(folding[i], false);
+	}
+	else
+		restoreSelection();
+
 }
 
 void Notepad_plus::doTrim(trimOp whichPart)
@@ -1493,11 +1587,13 @@ void Notepad_plus::doTrim(trimOp whichPart)
 	env._searchType = FindRegex;
 	auto mainSelAnchor = _pEditView->execute(SCI_GETANCHOR);
 	auto mainSelCaretPos = _pEditView->execute(SCI_GETCURRENTPOS);
-	auto rectSelAnchorVirt = _pEditView->execute(SCI_GETRECTANGULARSELECTIONANCHORVIRTUALSPACE);
-	auto rectSelCaretVirt = _pEditView->execute(SCI_GETRECTANGULARSELECTIONCARETVIRTUALSPACE);
-	bool isRectSel = (_pEditView->execute(SCI_GETSELECTIONMODE) == SC_SEL_RECTANGLE) || (_pEditView->execute(SCI_GETSELECTIONMODE) == SC_SEL_THIN);
-	bool isEntireDoc = (mainSelAnchor == mainSelCaretPos) && (rectSelAnchorVirt == rectSelCaretVirt);
+	bool isEntireDoc = (mainSelAnchor == mainSelCaretPos);
 	auto docLength = _pEditView->execute(SCI_GETLENGTH);
+
+	// block selection is not supported
+	if ((_pEditView->execute(SCI_GETSELECTIONMODE) == SC_SEL_RECTANGLE) || (_pEditView->execute(SCI_GETSELECTIONMODE) == SC_SEL_THIN))
+		return;
+
 	// auto-expand of partially selected lines
 	if (!isEntireDoc)
 	{
@@ -1516,22 +1612,25 @@ void Notepad_plus::doTrim(trimOp whichPart)
 		_pEditView->execute(SCI_SETSEL, startPos, endPos);
 	}
 	_findReplaceDlg.processAll(ProcessReplaceAll, &env, isEntireDoc);
+
 	// restore original selection if nothing has changed
 	if (!isEntireDoc && (docLength == _pEditView->execute(SCI_GETLENGTH)))
 	{
-		if (isRectSel)
-		{
-			_pEditView->execute(SCI_SETRECTANGULARSELECTIONANCHOR, mainSelAnchor);
-			_pEditView->execute(SCI_SETRECTANGULARSELECTIONANCHORVIRTUALSPACE, rectSelAnchorVirt);
-			_pEditView->execute(SCI_SETRECTANGULARSELECTIONCARET, mainSelCaretPos);
-			_pEditView->execute(SCI_SETRECTANGULARSELECTIONCARETVIRTUALSPACE, rectSelCaretVirt);
-		}
-		else
-		{
 		_pEditView->execute(SCI_SETANCHOR, mainSelAnchor);
 		_pEditView->execute(SCI_SETCURRENTPOS, mainSelCaretPos);
-		}
 	}
+}
+
+void Notepad_plus::eol2ws()
+{
+	bool isEntireDoc = (_pEditView->execute(SCI_GETANCHOR) == _pEditView->execute(SCI_GETCURRENTPOS));
+
+	// block selection is not supported
+	if ((_pEditView->execute(SCI_GETSELECTIONMODE) == SC_SEL_RECTANGLE) || (_pEditView->execute(SCI_GETSELECTIONMODE) == SC_SEL_THIN))
+		return;
+
+	_pEditView->execute(isEntireDoc ? SCI_TARGETWHOLEDOCUMENT: SCI_TARGETFROMSELECTION);
+	_pEditView->execute(SCI_LINESJOIN);
 }
 
 void Notepad_plus::removeEmptyLine(bool isBlankContained)
@@ -2657,7 +2756,7 @@ void Notepad_plus::findMatchingBracePos(intptr_t& braceAtCaret, intptr_t& braceO
 		charBefore = TCHAR(_pEditView->execute(SCI_GETCHARAT, caretPos - 1, 0));
 	}
 	// Priority goes to character before caret
-	if (charBefore && generic_strchr(TEXT("[](){}"), charBefore))
+	if (charBefore && wcschr(L"[](){}", charBefore))
     {
 		braceAtCaret = caretPos - 1;
 	}
@@ -2666,7 +2765,7 @@ void Notepad_plus::findMatchingBracePos(intptr_t& braceAtCaret, intptr_t& braceO
     {
 		// No brace found so check other side
 		TCHAR charAfter = TCHAR(_pEditView->execute(SCI_GETCHARAT, caretPos, 0));
-		if (charAfter && generic_strchr(TEXT("[](){}"), charAfter))
+		if (charAfter && wcschr(L"[](){}", charAfter))
         {
 			braceAtCaret = caretPos;
 		}
@@ -2856,7 +2955,7 @@ bool isUrlSchemeSupported(INTERNET_SCHEME s, TCHAR *url)
 		int i = 0;
 		while (p [i] && (p [i] != ' ')) i++;
 		if (i == 0) return false;
-		if (generic_strnicmp (url, p, i) == 0) return true;
+		if (wcsnicmp(url, p, i) == 0) return true;
 		p += i;
 		while (*p == ' ') p++;
 	}
@@ -3250,7 +3349,7 @@ void Notepad_plus::maintainIndentation(TCHAR ch)
 
 	if (type == L_C || type == L_CPP || type == L_JAVA || type == L_CS || type == L_OBJC ||
 		type == L_PHP || type == L_JS || type == L_JAVASCRIPT || type == L_JSP || type == L_CSS || type == L_PERL || 
-		type == L_RUST || type == L_POWERSHELL || type == L_JSON || autoIndentMode == ExternalLexerAutoIndentMode::C_Like)
+		type == L_RUST || type == L_POWERSHELL || type == L_JSON || type == L_JSON5 || autoIndentMode == ExternalLexerAutoIndentMode::C_Like)
 	{
 		if (((eolMode == SC_EOL_CRLF || eolMode == SC_EOL_LF) && ch == '\n') ||
 			(eolMode == SC_EOL_CR && ch == '\r'))
@@ -3293,7 +3392,7 @@ void Notepad_plus::maintainIndentation(TCHAR ch)
 				_pEditView->setLineIndent(curLine, indentAmountPrevLine);
 			}
 			// These languages do no support single line control structures without braces.
-			else if (type == L_PERL || type == L_RUST || type == L_POWERSHELL || type == L_JSON)
+			else if (type == L_PERL || type == L_RUST || type == L_POWERSHELL || type == L_JSON || type == L_JSON5)
 			{
 				_pEditView->setLineIndent(curLine, indentAmountPrevLine);
 			}
@@ -3472,6 +3571,8 @@ LangType Notepad_plus::menuID2LangType(int cmdID)
 			return L_JAVASCRIPT;
 		case IDM_LANG_JSON:
 			return L_JSON;
+		case IDM_LANG_JSON5:
+			return L_JSON5;
         case IDM_LANG_PHP :
             return L_PHP;
         case IDM_LANG_ASP :
@@ -4123,7 +4224,7 @@ void Notepad_plus::hideView(int whichOne)
 		return;
 
 	Window * windowToSet = (whichOne == MAIN_VIEW)?&_subDocTab:&_mainDocTab;
-	if (_mainWindowStatus & WindowUserActive)
+	if ((_mainWindowStatus & WindowUserActive) == WindowUserActive)
 	{
 		_pMainSplitter->setWin0(windowToSet);
 	}
@@ -4150,7 +4251,7 @@ void Notepad_plus::hideView(int whichOne)
 	::SendMessage(_pPublicInterface->getHSelf(), WM_SIZE, 0, 0);
 
 	switchEditViewTo(otherFromView(whichOne));
-	int viewToDisable = (whichOne == SUB_VIEW?WindowSubActive:WindowMainActive);
+	auto viewToDisable = static_cast<UCHAR>(whichOne == SUB_VIEW ? WindowSubActive : WindowMainActive);
 	_mainWindowStatus &= ~viewToDisable;
 }
 
@@ -4396,16 +4497,16 @@ void Notepad_plus::docOpenInNewInstance(FileTransferMode mode, int x, int y)
 
 	if (x)
 	{
-		TCHAR pX[10];
-		generic_itoa(x, pX, 10);
+		TCHAR pX[10]{};
+		_itow(x, pX, 10);
 		command += TEXT(" -x");
 		command += pX;
 	}
 
 	if (y)
 	{
-		TCHAR pY[10];
-		generic_itoa(y, pY, 10);
+		TCHAR pY[10]{};
+		_itow(y, pY, 10);
 		command += TEXT(" -y");
 		command += pY;
 	}
@@ -4518,6 +4619,12 @@ void Notepad_plus::docGotoAnotherEditView(FileTransferMode mode)
 	{
 		command(IDM_VIEW_MONITORING);
 	}
+
+	if (_pDocumentListPanel != nullptr)
+	{
+		Buffer* buf = MainFileManager.getBufferByID(current);
+		_pDocumentListPanel->setItemColor(buf);
+	}
 }
 
 bool Notepad_plus::activateBuffer(BufferID id, int whichOne, bool forceApplyHilite)
@@ -4607,9 +4714,9 @@ void Notepad_plus::bookmarkNext(bool forwardScan)
 		lineRetry = _pEditView->execute(SCI_GETLINECOUNT);	//If not found, try from the end
 		sci_marker = SCI_MARKERPREVIOUS;
 	}
-	intptr_t nextLine = _pEditView->execute(sci_marker, lineStart, 1 << MARK_BOOKMARK);
+	intptr_t nextLine = _pEditView->execute(sci_marker, lineStart, static_cast<LPARAM>(1 << MARK_BOOKMARK));
 	if (nextLine < 0)
-		nextLine = _pEditView->execute(sci_marker, lineRetry, 1 << MARK_BOOKMARK);
+		nextLine = _pEditView->execute(sci_marker, lineRetry, static_cast<LPARAM>(1 << MARK_BOOKMARK));
 
 	if (nextLine < 0)
 		return;
@@ -4621,32 +4728,17 @@ void Notepad_plus::bookmarkNext(bool forwardScan)
 void Notepad_plus::staticCheckMenuAndTB() const
 {
 	// Visibility of invisible characters
-	bool wsTabShow = _pEditView->isInvisibleCharsShown();
-	bool eolShow = _pEditView->isEolVisible();
+	const bool wsTabShow = _pEditView->isShownSpaceAndTab();
+	const bool eolShow = _pEditView->isShownEol();
+	const bool npcShow = _pEditView->isShownNpc();
 
-	bool onlyWS = false;
-	bool onlyEOL = false;
-	bool bothWSEOL = false;
-	if (wsTabShow)
-	{
-		if (eolShow)
-		{
-			bothWSEOL = true;
-		}
-		else
-		{
-			onlyWS = true;
-		}
-	}
-	else if (eolShow)
-	{
-		onlyEOL = true;
-	}
+	const bool allShow = wsTabShow && eolShow && npcShow;
 
-	checkMenuItem(IDM_VIEW_TAB_SPACE, onlyWS);
-	checkMenuItem(IDM_VIEW_EOL, onlyEOL);
-	checkMenuItem(IDM_VIEW_ALL_CHARACTERS, bothWSEOL);
-	_toolBar.setCheck(IDM_VIEW_ALL_CHARACTERS, bothWSEOL);
+	checkMenuItem(IDM_VIEW_TAB_SPACE, wsTabShow);
+	checkMenuItem(IDM_VIEW_EOL, eolShow);
+	checkMenuItem(IDM_VIEW_NPC, npcShow);
+	checkMenuItem(IDM_VIEW_ALL_CHARACTERS, allShow);
+	_toolBar.setCheck(IDM_VIEW_ALL_CHARACTERS, allShow);
 
 	// Visibility of the indentation guide line
 	bool b = _pEditView->isShownIndentGuide();
@@ -4967,7 +5059,7 @@ bool Notepad_plus::doBlockComment(comment_mode currCommentMode)
 			{
 				// In order to do get case insensitive comparison use strnicmp() instead case-sensitive comparison.
 				//      Case insensitive comparison is needed e.g. for "REM" and "rem" in Batchfiles.
-				if (generic_strnicmp(linebufStr.c_str(), comment.c_str(), !(buf->getLangType() == L_BAANC) ? comment_length - 1 : comment_length) == 0)
+				if (wcsnicmp(linebufStr.c_str(), comment.c_str(), !(buf->getLangType() == L_BAANC) ? comment_length - 1 : comment_length) == 0)
 				{
 					size_t len = linebufStr[comment_length - 1] == aSpace[0] ? comment_length : !(buf->getLangType() == L_BAANC) ? comment_length - 1 : comment_length;
 
@@ -5003,8 +5095,8 @@ bool Notepad_plus::doBlockComment(comment_mode currCommentMode)
 			}
 			else // isSingleLineAdvancedMode
 			{
-				if ((generic_strnicmp(linebufStr.c_str(), advCommentStart.c_str(), advCommentStart_length - 1) == 0) &&
-					(generic_strnicmp(linebufStr.substr(linebufStr.length() - advCommentEnd_length + 1, advCommentEnd_length - 1).c_str(), advCommentEnd.substr(1, advCommentEnd_length - 1).c_str(), advCommentEnd_length - 1) == 0))
+				if ((wcsnicmp(linebufStr.c_str(), advCommentStart.c_str(), advCommentStart_length - 1) == 0) &&
+					(wcsnicmp(linebufStr.substr(linebufStr.length() - advCommentEnd_length + 1, advCommentEnd_length - 1).c_str(), advCommentEnd.substr(1, advCommentEnd_length - 1).c_str(), advCommentEnd_length - 1) == 0))
 				{
 					size_t startLen = linebufStr[advCommentStart_length - 1] == aSpace[0] ? advCommentStart_length : advCommentStart_length - 1;
 					size_t endLen = linebufStr[linebufStr.length() - advCommentEnd_length] == aSpace[0] ? advCommentEnd_length : advCommentEnd_length - 1;
@@ -5294,14 +5386,14 @@ void Notepad_plus::getTaskListInfo(TaskListInfo *tli)
 		BufferID bufID = _pDocTab->getBufferByIndex(i);
 		Buffer * b = MainFileManager.getBufferByID(bufID);
 		int status = b->isMonitoringOn()?tb_monitored:(b->isReadOnly()?tb_ro:(b->isDirty()?tb_unsaved:tb_saved));
-		tli->_tlfsLst.push_back(TaskLstFnStatus(currentView(), i, b->getFullPathName(), status, (void *)bufID));
+		tli->_tlfsLst.push_back(TaskLstFnStatus(currentView(), i, b->getFullPathName(), status, (void *)bufID, b->getDocColorId()));
 	}
 	for (int i = 0 ; i < nonCurrentNbDoc ; ++i)
 	{
 		BufferID bufID = _pNonDocTab->getBufferByIndex(i);
 		Buffer * b = MainFileManager.getBufferByID(bufID);
 		int status = b->isMonitoringOn()?tb_monitored:(b->isReadOnly()?tb_ro:(b->isDirty()?tb_unsaved:tb_saved));
-		tli->_tlfsLst.push_back(TaskLstFnStatus(otherView(), i, b->getFullPathName(), status, (void *)bufID));
+		tli->_tlfsLst.push_back(TaskLstFnStatus(otherView(), i, b->getFullPathName(), status, (void *)bufID, b->getDocColorId()));
 	}
 }
 
@@ -5829,7 +5921,7 @@ bool Notepad_plus::getIntegralDockingData(tTbData & dockData, int & iCont, bool 
 	{
 		const PluginDlgDockingInfo & pddi = dockingData._pluginDockInfo[i];
 
-		if (!generic_stricmp(pddi._name.c_str(), dockData.pszModuleName) && (pddi._internalID == dockData.dlgID))
+		if (!wcsicmp(pddi._name.c_str(), dockData.pszModuleName) && (pddi._internalID == dockData.dlgID))
 		{
 			iCont				= pddi._currContainer;
 			isVisible			= pddi._isVisible;
@@ -5887,7 +5979,7 @@ void Notepad_plus::getCurrentOpenedFiles(Session & session, bool includUntitledD
 			sessionFileInfo sfi(buf->getFullPathName(), langName, buf->getEncoding(), buf->getUserReadOnly(), buf->getPosition(editView), buf->getBackupFileName().c_str(), buf->getLastModifiedTimestamp(), buf->getMapPosition());
 
 			sfi._isMonitoring = buf->isMonitoringOn();
-			sfi._individualTabColour = docTab[0]->getIndividualTabColour(static_cast<int>(i));
+			sfi._individualTabColour = docTab[k]->getIndividualTabColour(static_cast<int>(i));
 
 			_invisibleEditView.execute(SCI_SETDOCPOINTER, 0, buf->getDocument());
 			size_t maxLine = static_cast<size_t>(_invisibleEditView.execute(SCI_GETLINECOUNT));
@@ -6219,7 +6311,7 @@ void Notepad_plus::notifyBufferChanged(Buffer * buffer, int mask)
 
 	if (mask & (BufferChangeLanguage))
 	{
-		checkLangsMenu(-1);	//let N++ do search for the item
+		checkLangsMenu(-1);	//let Notepad++ do search for the item
 		setLangStatus(buffer->getLangType());
 		if (_mainEditView.getCurrentBuffer() == buffer)
 			_autoCompleteMain.setLanguage(buffer->getLangType());
@@ -6679,11 +6771,11 @@ bool Notepad_plus::reloadLang()
 	}
 	if (_tabPopupDropMenu.isCreated())
 	{
-		_nativeLangSpeaker.changeLangTabDrapContextMenu(_tabPopupDropMenu.getMenuHandle());
+		_nativeLangSpeaker.changeLangTabDropContextMenu(_tabPopupDropMenu.getMenuHandle());
 	}
 	if (_fileSwitcherMultiFilePopupMenu.isCreated())
 	{
-		//_nativeLangSpeaker.changeLangTabDrapContextMenu(_fileSwitcherMultiFilePopupMenu.getMenuHandle());
+		//_nativeLangSpeaker.changeLangTabDropContextMenu(_fileSwitcherMultiFilePopupMenu.getMenuHandle());
 	}
 	if (_preference.isCreated())
 	{
@@ -7469,6 +7561,7 @@ static const QuoteParams quotes[] =
 	{TEXT("Anonymous #196"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("What happened to the function that ran away?\nIt never returned.\n") },
 	{TEXT("Anonymous #197"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("When I am tasked with sorting through a stack of résumés, I throw about half of them in the garbage.\nI do not want unlucky people working in our company.\n") },
 	{TEXT("Anonymous #198"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("The reason why we write SQL commands all in CAPITAL letters is because it stands for Screaming Query Language.\n") },
+	{TEXT("Anonymous #199"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("Fly: Hey, bug on my back, are you a mite?\nMite: I mite be.\nFly: Stupidest pun I ever heard.\nMite: What do you expect? I just made it up on the fly.\n\n") },
 	{TEXT("xkcd"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("Never have I felt so close to another soul\nAnd yet so helplessly alone\nAs when I Google an error\nAnd there's one result\nA thread by someone with the same problem\nAnd no answer\nLast posted to in 2003\n\n\"Who were you, DenverCoder9?\"\n\"What did you see?!\"\n\n(ref: https://xkcd.com/979/)") },
 	{TEXT("A developer"), QuoteParams::slow, false, SC_CP_UTF8, L_TEXT, TEXT("No hugs & kisses.\nOnly bugs & fixes.") },
 	{TEXT("Elon Musk"), QuoteParams::rapid, false, SC_CP_UTF8, L_TEXT, TEXT("Don't set your password as your child's name.\nName your child after your password.") },
@@ -8170,6 +8263,8 @@ bool Notepad_plus::undoStreamComment(bool tryBlockComment)
 	size_t start_comment_length = start_comment.length();
 	size_t end_comment_length = end_comment.length();
 
+	_pEditView->execute(SCI_BEGINUNDOACTION);
+
 	// do as long as stream-comments are within selection
 	do
 	{
@@ -8252,7 +8347,10 @@ bool Notepad_plus::undoStreamComment(bool tryBlockComment)
 			}
 			//-- Finally, if there is no stream-comment, return
 			else
+			{
+				_pEditView->execute(SCI_ENDUNDOACTION);
 				return retVal;
+			}
 		}
 
 		//-- Ok, there are valid start-comment and valid end-comment around the caret-position.
@@ -8264,7 +8362,7 @@ bool Notepad_plus::undoStreamComment(bool tryBlockComment)
 		//-- First delete end-comment, so that posStartCommentBefore does not change!
 		//-- Get character before end-comment to decide, if there is a white character before the end-comment, which will be removed too!
 		_pEditView->getGenericText(charbuf, charbufLen, posEndComment-1, posEndComment);
-		if (generic_strncmp(charbuf, white_space.c_str(), white_space.length()) == 0)
+		if (wcsncmp(charbuf, white_space.c_str(), white_space.length()) == 0)
 		{
 			endCommentLength +=1;
 			posEndComment-=1;
@@ -8276,7 +8374,7 @@ bool Notepad_plus::undoStreamComment(bool tryBlockComment)
 
 		//-- Get character after start-comment to decide, if there is a white character after the start-comment, which will be removed too!
 		_pEditView->getGenericText(charbuf, charbufLen, posStartComment+startCommentLength, posStartComment+startCommentLength+1);
-		if (generic_strncmp(charbuf, white_space.c_str(), white_space.length()) == 0)
+		if (wcsncmp(charbuf, white_space.c_str(), white_space.length()) == 0)
 			startCommentLength +=1;
 
 		//-- Delete starting stream-comment string ---------
@@ -8318,6 +8416,7 @@ bool Notepad_plus::undoStreamComment(bool tryBlockComment)
 		}
 	}
 	while (1); //do as long as stream-comments are within selection
+
 }
 
 void Notepad_plus::monitoringStartOrStopAndUpdateUI(Buffer* pBuf, bool isStarting)
@@ -8339,7 +8438,8 @@ void Notepad_plus::createMonitoringThread(Buffer* pBuf)
 {
 	MonitorInfo *monitorInfo = new Notepad_plus::MonitorInfo(pBuf, _pPublicInterface->getHSelf());
 	HANDLE hThread = ::CreateThread(NULL, 0, monitorFileOnChange, (void *)monitorInfo, 0, NULL); // will be deallocated while quitting thread
-	::CloseHandle(hThread);
+	if (hThread != nullptr)
+		::CloseHandle(hThread);
 }
 
 // Fill names into the shortcut list.

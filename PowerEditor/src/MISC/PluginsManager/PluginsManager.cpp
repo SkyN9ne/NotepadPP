@@ -365,7 +365,7 @@ bool PluginsManager::loadPlugins(const TCHAR* dir, const PluginViewList* pluginU
 	if (hFindFolder != INVALID_HANDLE_VALUE && (foundData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 	{
 		generic_string foundFileName = foundData.cFileName;
-		if (foundFileName != TEXT(".") && foundFileName != TEXT("..") && generic_stricmp(foundFileName.c_str(), TEXT("Config")) != 0)
+		if (foundFileName != TEXT(".") && foundFileName != TEXT("..") && wcsicmp(foundFileName.c_str(), TEXT("Config")) != 0)
 		{
 			generic_string pluginsFullPathFilter = pluginsFolder;
 			pathAppend(pluginsFullPathFilter, foundFileName);
@@ -437,7 +437,7 @@ bool PluginsManager::loadPlugins(const TCHAR* dir, const PluginViewList* pluginU
 		while (::FindNextFile(hFindFolder, &foundData))
 		{
 			generic_string foundFileName2 = foundData.cFileName;
-			if (foundFileName2 != TEXT(".") && foundFileName2 != TEXT("..") && generic_stricmp(foundFileName2.c_str(), TEXT("Config")) != 0)
+			if (foundFileName2 != TEXT(".") && foundFileName2 != TEXT("..") && wcsicmp(foundFileName2.c_str(), TEXT("Config")) != 0)
 			{
 				generic_string pluginsFullPathFilter2 = pluginsFolder;
 				pathAppend(pluginsFullPathFilter2, foundFileName2);
@@ -664,8 +664,9 @@ void PluginsManager::runPluginCommand(size_t i)
 			}
 			catch (...)
 			{
-				TCHAR funcInfo[128];
-				generic_sprintf(funcInfo, TEXT("runPluginCommand(size_t i : %zd)"), i);
+				constexpr size_t bufSize = 128;
+				TCHAR funcInfo[bufSize] = { '\0' };
+				swprintf(funcInfo, bufSize, TEXT("runPluginCommand(size_t i : %zd)"), i);
 				pluginCrashAlert(_pluginsCommands[i]._pluginName.c_str(), funcInfo);
 			}
 		}
@@ -677,7 +678,7 @@ void PluginsManager::runPluginCommand(const TCHAR *pluginName, int commandID)
 {
 	for (size_t i = 0, len = _pluginsCommands.size() ; i < len ; ++i)
 	{
-		if (!generic_stricmp(_pluginsCommands[i]._pluginName.c_str(), pluginName))
+		if (!wcsicmp(_pluginsCommands[i]._pluginName.c_str(), pluginName))
 		{
 			if (_pluginsCommands[i]._funcID == commandID)
 			{
@@ -691,8 +692,9 @@ void PluginsManager::runPluginCommand(const TCHAR *pluginName, int commandID)
 				}
 				catch (...)
 				{
-					TCHAR funcInfo[128];
-					generic_sprintf(funcInfo, TEXT("runPluginCommand(const TCHAR *pluginName : %s, int commandID : %d)"), pluginName, commandID);
+					constexpr size_t bufSize = 128;
+					TCHAR funcInfo[bufSize] = { '\0' };
+					swprintf(funcInfo, bufSize, TEXT("runPluginCommand(const TCHAR *pluginName : %s, int commandID : %d)"), pluginName, commandID);
 					pluginCrashAlert(_pluginsCommands[i]._pluginName.c_str(), funcInfo);
 				}
 			}
@@ -721,8 +723,9 @@ void PluginsManager::notify(size_t indexPluginInfo, const SCNotification *notifi
 		}
 		catch (...)
 		{
-			TCHAR funcInfo[256];
-			generic_sprintf(funcInfo, TEXT("notify(SCNotification *notification) : \r notification->nmhdr.code == %d\r notification->nmhdr.hwndFrom == %p\r notification->nmhdr.idFrom == %" PRIuPTR), \
+			constexpr size_t bufSize = 256;
+			TCHAR funcInfo[bufSize] = { '\0' };
+			swprintf(funcInfo, bufSize, TEXT("notify(SCNotification *notification) : \r notification->nmhdr.code == %d\r notification->nmhdr.hwndFrom == %p\r notification->nmhdr.idFrom == %" PRIuPTR), \
 				scNotif.nmhdr.code, scNotif.nmhdr.hwndFrom, scNotif.nmhdr.idFrom);
 			pluginCrashAlert(_pluginInfos[indexPluginInfo]->_moduleName.c_str(), funcInfo);
 		}
@@ -759,8 +762,9 @@ void PluginsManager::relayNppMessages(UINT Message, WPARAM wParam, LPARAM lParam
 			}
 			catch (...)
 			{
-				TCHAR funcInfo[128];
-				generic_sprintf(funcInfo, TEXT("relayNppMessages(UINT Message : %u, WPARAM wParam : %" PRIuPTR ", LPARAM lParam : %" PRIiPTR ")"), Message, wParam, lParam);
+				constexpr size_t bufSize = 128;
+				TCHAR funcInfo[bufSize] = { '\0' };
+				swprintf(funcInfo, bufSize, TEXT("relayNppMessages(UINT Message : %u, WPARAM wParam : %" PRIuPTR ", LPARAM lParam : %" PRIiPTR ")"), Message, wParam, lParam);
 				pluginCrashAlert(_pluginInfos[i]->_moduleName.c_str(), funcInfo);
 			}
 		}
@@ -790,8 +794,9 @@ bool PluginsManager::relayPluginMessages(UINT Message, WPARAM wParam, LPARAM lPa
 				}
 				catch (...)
 				{
-					TCHAR funcInfo[128];
-					generic_sprintf(funcInfo, TEXT("relayPluginMessages(UINT Message : %u, WPARAM wParam : %" PRIuPTR ", LPARAM lParam : %" PRIiPTR ")"), Message, wParam, lParam);
+					constexpr size_t bufSize = 128;
+					TCHAR funcInfo[bufSize] = { '\0' };
+					swprintf(funcInfo, bufSize, TEXT("relayPluginMessages(UINT Message : %u, WPARAM wParam : %" PRIuPTR ", LPARAM lParam : %" PRIiPTR ")"), Message, wParam, lParam);
 					pluginCrashAlert(_pluginInfos[i]->_moduleName.c_str(), funcInfo);
 				}
 				return true;

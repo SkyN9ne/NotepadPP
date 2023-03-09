@@ -30,7 +30,7 @@ public :
 	DocTabView():TabBarPlus(), _pView(NULL) {};
 	virtual ~DocTabView(){};
 	
-	virtual void destroy() {
+	void destroy() override {
 		TabBarPlus::destroy();
 	};
 
@@ -84,7 +84,7 @@ public :
 		return _hideTabBarStatus;
 	};
 
-	virtual void reSizeTo(RECT & rc);
+	void reSizeTo(RECT & rc) override;
 
 	const ScintillaEditView* getScintillaEditView() const {
 		return _pView;
@@ -97,7 +97,6 @@ private :
 	ScintillaEditView *_pView = nullptr;
 	static bool _hideTabBarStatus;
 
-	std::map<BufferID, int> _tabIndexToColour;
 	std::vector<IconList *> _pIconListVector;
 	int _iconListIndexChoice = -1;
 };
