@@ -27,6 +27,8 @@
 #define FIND_RECURSIVE 1
 #define FIND_INHIDDENDIR 2
 
+#define FIND_INVALID_REGULAR_EXPRESSION -2
+
 #define FINDREPLACE_MAXLENGTH 2048
 #define FINDREPLACE_INSEL_TEXTSIZE_THRESHOLD 1024
 
@@ -145,7 +147,7 @@ public:
 	generic_string getHitsString(int count) const;
 
 protected :
-	virtual intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	bool notify(SCNotification *notification);
 
 private:
@@ -223,17 +225,18 @@ struct FindersInfo
 class FindInFinderDlg : public StaticDialog
 {
 public:
-	void init(HINSTANCE hInst, HWND hPere) {
-		Window::init(hInst, hPere);
-	};
 	void doDialog(Finder *launcher, bool isRTL = false);
 	FindOption & getOption() { return _options; }
+	FindInFinderDlg() {
+		_options._isMatchCase = false;
+		_options._isWholeWord = false;
+	};
 
 private:
 	Finder  *_pFinder2Search = nullptr;
 	FindOption _options;
 	
-	virtual intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	void initFromOptions();
 	void writeOptions();
 };
@@ -261,7 +264,7 @@ public :
 		_ppEditView = ppEditView;
 	};
 
-	virtual void create(int dialogID, bool isRTL = false, bool msgDestParent = true);
+	void create(int dialogID, bool isRTL = false, bool msgDestParent = true, bool toShow = true);
 	
 	void initOptionsFromDlg();
 
@@ -316,12 +319,12 @@ public :
 	bool isProjectPanel_3() const { return _env->_isProjectPanel_3; };
 	void saveFindHistory();
 	void changeTabName(DIALOG_TYPE index, const TCHAR *name2change) {
-		TCITEM tie;
+		TCITEM tie{};
 		tie.mask = TCIF_TEXT;
 		tie.pszText = (TCHAR *)name2change;
 		TabCtrl_SetItem(_tab.getHSelf(), index, &tie);
 
-		TCHAR label[MAX_PATH];
+		TCHAR label[MAX_PATH]{};
 		_tab.getCurrentTitle(label, MAX_PATH);
 		::SetWindowText(_hSelf, label);
 	}
@@ -385,6 +388,7 @@ public :
 	void execSavedCommand(int cmd, uptr_t intValue, const generic_string& stringValue);
 	void clearMarks(const FindOption& opt);
 	void setStatusbarMessage(const generic_string & msg, FindStatus staus, char const *pTooltipMsg = NULL);
+	void setStatusbarMessageWithRegExprErr(ScintillaEditView* pEditView);
 	generic_string getScopeInfoForStatusBar(FindOption const *pFindOpt) const;
 	Finder * createFinder();
 	bool removeFinder(Finder *finder2remove);
@@ -392,7 +396,7 @@ public :
 
 protected :
 	void resizeDialogElements(LONG newWidth);
-	virtual intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	static WNDPROC originalFinderProc;
 	static WNDPROC originalComboEditProc;
 
@@ -424,7 +428,7 @@ private :
 	RECT _collapseButtonPos = {};
 	RECT _uncollapseButtonPos = {};
 
-	ScintillaEditView **_ppEditView = nullptr;
+	ScintillaEditView** _ppEditView = nullptr;
 	Finder  *_pFinder = nullptr;
 	generic_string _findResTitle;
 
@@ -436,7 +440,7 @@ private :
 
 	bool _isRTL = false;
 
-	int _findAllResult;
+	int _findAllResult = 0;
 	TCHAR _findAllResultStr[1024] = {'\0'};
 
 	int _fileNameLenMax = 1024;
@@ -521,8 +525,8 @@ class FindIncrementDlg : public StaticDialog
 public :
 	FindIncrementDlg() = default;
 	void init(HINSTANCE hInst, HWND hPere, FindReplaceDlg *pFRDlg, bool isRTL = false);
-	virtual void destroy();
-	virtual void display(bool toShow = true) const;
+	void destroy() override;
+	void display(bool toShow = true) const override;
 
 	void setSearchText(const TCHAR* txt2find, bool) {
 		::SendDlgItemMessage(_hSelf, IDC_INCFINDTEXT, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(txt2find));
@@ -541,9 +545,9 @@ private :
 	FindStatus _findStatus = FSFound;
 
 	ReBar* _pRebar = nullptr;
-	REBARBANDINFO _rbBand = {};
+	REBARBANDINFO _rbBand{};
 
-	virtual intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	void markSelectedTextInc(bool enable, FindOption *opt = NULL);
 };
 
@@ -568,13 +572,8 @@ public:
 		return false;
 	}
 
-	void setInfo(const TCHAR *info) const
-	{
-		if (_hwnd)
-			::SendMessage(_hPText, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(info));
-	}
-
-	void setPercent(unsigned percent, const TCHAR *fileName) const;
+	void setPercent(unsigned percent, const TCHAR* fileName, int nbHitsSoFar) const;
+	void setInfo(const TCHAR* info, int nbHitsSoFar = -1) const;
 
 private:
 	static const TCHAR cClassName[];
@@ -599,8 +598,11 @@ private:
 	TCHAR _header[128] = {'\0'};
 	HANDLE _hThread = nullptr;
 	HANDLE _hActiveState = nullptr;
-	HWND _hPText = nullptr;
+	HWND _hPathText = nullptr;
+	HWND _hRunningHitsStaticText = nullptr;
+	HWND _hRunningHitsText = nullptr;
 	HWND _hPBar = nullptr;
 	HWND _hBtn = nullptr;
+	HFONT _hFont = nullptr;
 };
 

@@ -155,6 +155,7 @@ LanguageNameInfo ScintillaEditView::_langNameInfoArray[L_EXTERNAL + 1] = {
 	{TEXT("json5"),			TEXT("json5"),				TEXT("JSON5 file"),										L_JSON5,		"json"},
 	{TEXT("mssql"),			TEXT("mssql"),				TEXT("Microsoft Transact-SQL (SQL Server) file"),		L_MSSQL,		"mssql"},
 	{TEXT("gdscript"),		TEXT("GDScript"),			TEXT("GDScript file"),									L_GDSCRIPT,		"gdscript"},
+	{TEXT("hollywood"),		TEXT("Hollywood"),			TEXT("Hollywood script"),								L_HOLLYWOOD,	"hollywood"},
 	{TEXT("ext"),			TEXT("External"),			TEXT("External"),										L_EXTERNAL,		"null"}
 };
 
@@ -179,6 +180,12 @@ int getNbDigits(int aNum, int base)
 		nbChiffre += 1;
 
 	return nbChiffre;
+}
+
+bool isCharSingleQuote(__inout wchar_t const c)
+{
+    if (c == L'\'' || c == L'\u2019' || c == L'\u2018') return true;
+    else return false;
 }
 
 void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
@@ -722,6 +729,8 @@ void ScintillaEditView::setJsonLexer(bool isJson5)
 
 	execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold"), reinterpret_cast<LPARAM>("1"));
 	execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.compact"), reinterpret_cast<LPARAM>("0"));
+
+	execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("lexer.json.escape.sequence"), reinterpret_cast<LPARAM>("1"));
 
 	if (j == L_JSON5)
 		execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("lexer.json.allow.comments"), reinterpret_cast<LPARAM>("1"));
@@ -1423,7 +1432,7 @@ void ScintillaEditView::setCRLF(long color)
 	redraw();
 }
 
-void ScintillaEditView::setNPC(long color)
+void ScintillaEditView::setNpcAndCcUniEOL(long color)
 {
 	NppParameters& nppParams = NppParameters::getInstance();
 	const ScintillaViewParams& svp = nppParams.getSVP();
@@ -1447,10 +1456,22 @@ void ScintillaEditView::setNPC(long color)
 	const long appearance = svp._npcCustomColor ? SC_REPRESENTATION_BLOB | SC_REPRESENTATION_COLOUR : SC_REPRESENTATION_BLOB;
 	const long alphaNpcCustomColor = npcCustomColor | 0xFF000000; // add alpha color to make DirectWrite mode work
 
-	for (const auto& invChar : g_nonPrintingChars)
+	if (svp._npcShow)
 	{
-		execute(SCI_SETREPRESENTATIONCOLOUR, reinterpret_cast<WPARAM>(invChar.at(0)), alphaNpcCustomColor);
-		execute(SCI_SETREPRESENTATIONAPPEARANCE, reinterpret_cast<WPARAM>(invChar.at(0)), appearance);
+		for (const auto& invChar : g_nonPrintingChars)
+		{
+			execute(SCI_SETREPRESENTATIONCOLOUR, reinterpret_cast<WPARAM>(invChar.at(0)), alphaNpcCustomColor);
+			execute(SCI_SETREPRESENTATIONAPPEARANCE, reinterpret_cast<WPARAM>(invChar.at(0)), appearance);
+		}
+	}
+
+	if (svp._ccUniEolShow && svp._npcIncludeCcUniEol)
+	{
+		for (const auto& invChar : g_ccUniEolChars)
+		{
+			execute(SCI_SETREPRESENTATIONCOLOUR, reinterpret_cast<WPARAM>(invChar.at(0)), alphaNpcCustomColor);
+			execute(SCI_SETREPRESENTATIONAPPEARANCE, reinterpret_cast<WPARAM>(invChar.at(0)), appearance);
+		}
 	}
 
 	redraw();
@@ -1814,6 +1835,9 @@ void ScintillaEditView::defineDocType(LangType typeDoc)
 		case L_GDSCRIPT:
 			setGDScriptLexer(); break;
 
+		case L_HOLLYWOOD:
+			setHollywoodLexer(); break;
+
 		case L_TEXT :
 		default :
 			if (typeDoc >= L_EXTERNAL && typeDoc < NppParameters::getInstance().L_END)
@@ -1863,7 +1887,7 @@ BufferID ScintillaEditView::attachDefaultDoc()
 	// get the doc pointer attached (by default) on the view Scintilla
 	Document doc = execute(SCI_GETDOCPOINTER, 0, 0);
 	execute(SCI_ADDREFDOCUMENT, 0, doc);
-	BufferID id = MainFileManager.bufferFromDocument(doc, false, true);//true, true);	//keep counter on 1
+	BufferID id = MainFileManager.bufferFromDocument(doc, _isMainEditZone);
 	Buffer * buf = MainFileManager.getBufferByID(id);
 
 	MainFileManager.addBufferReference(id, this);	//add a reference. Notepad only shows the buffer in tabbar
@@ -2043,6 +2067,8 @@ void ScintillaEditView::activateBuffer(BufferID buffer, bool force)
 		restyleBuffer();
 	}
 
+	maintainStateForNpc();
+
 	// Everything should be updated, but the language
 	bufferUpdated(_currentBuffer, (BufferChangeMask & ~BufferChangeLanguage));
 
@@ -2054,13 +2080,7 @@ void ScintillaEditView::activateBuffer(BufferID buffer, bool force)
 
 	runMarkers(true, 0, true, false);
 
-	if (isShownNpc())
-	{
-		showNpc();
-	}
-
 	setCRLF();
-	setNPC();
 
 	NppParameters& nppParam = NppParameters::getInstance();
 	const ScintillaViewParams& svp = nppParam.getSVP();
@@ -2796,12 +2816,22 @@ void ScintillaEditView::performGlobalStyles()
 	execute(SCI_SETMARGINTYPEN, _SC_MARGE_SYMBOL, SC_MARGIN_COLOUR);
 	execute(SCI_SETMARGINBACKN, _SC_MARGE_SYMBOL, bookmarkMarginColor);
 
+	COLORREF changeHistoryMarginColor = veryLiteGrey;
 	pStyle = stylers.findByName(TEXT("Change History margin"));
-	if (pStyle)
+	if (!pStyle)
 	{
-		execute(SCI_SETMARGINTYPEN, _SC_MARGE_CHANGEHISTORY, SC_MARGIN_COLOUR);
-		execute(SCI_SETMARGINBACKN, _SC_MARGE_CHANGEHISTORY, pStyle->_bgColor);
+		pStyle = stylers.findByName(TEXT("Line number margin"));
+		if (pStyle)
+		{
+			changeHistoryMarginColor = pStyle->_bgColor;
+		}
 	}
+	else
+	{
+		changeHistoryMarginColor = pStyle->_bgColor;
+	}
+	execute(SCI_SETMARGINTYPEN, _SC_MARGE_CHANGEHISTORY, SC_MARGIN_COLOUR);
+	execute(SCI_SETMARGINBACKN, _SC_MARGE_CHANGEHISTORY, changeHistoryMarginColor);
 
 	COLORREF urlHoveredFG = grey;
 	pStyle = stylers.findByName(TEXT("URL hovered"));
@@ -2841,7 +2871,87 @@ void ScintillaEditView::performGlobalStyles()
 	{
 		npcCustomColor = pStyle->_fgColor;
 	}
-	setNPC(npcCustomColor);
+	setNpcAndCcUniEOL(npcCustomColor);
+}
+
+void ScintillaEditView::showNpc(bool willBeShowed, bool isSearchResult)
+{
+	auto& svp = NppParameters::getInstance().getSVP();
+
+	if (willBeShowed)
+	{
+		const auto& mode = static_cast<size_t>(svp._npcMode);
+		for (const auto& invChar : g_nonPrintingChars)
+		{
+			execute(SCI_SETREPRESENTATION, reinterpret_cast<WPARAM>(invChar.at(0)), reinterpret_cast<LPARAM>(invChar.at(mode)));
+		}
+
+		if (svp._npcCustomColor)
+		{
+			setNpcAndCcUniEOL();
+		}
+
+		// in some case npc representation is not redrawn correctly on first line
+		// therefore use of showEOL(isShownEol()) instead of redraw()
+		showEOL(isShownEol());
+	}
+	else
+	{
+		execute(SCI_CLEARALLREPRESENTATIONS);
+
+		// SCI_CLEARALLREPRESENTATIONS will also reset CRLF and CcUniEOL
+		if (!isSearchResult && svp._eolMode != svp.roundedRectangleText)
+		{
+			setCRLF();
+		}
+
+		showCcUniEol(svp._ccUniEolShow);
+	}
+}
+
+void ScintillaEditView::showCcUniEol(bool willBeShowed, bool isSearchResult)
+{
+	auto& svp = NppParameters::getInstance().getSVP();
+
+	if (willBeShowed)
+	{
+		const auto& mode = static_cast<size_t>(svp._npcIncludeCcUniEol ? svp._npcMode : ScintillaViewParams::npcMode::abbreviation);
+		for (const auto& invChar : g_ccUniEolChars)
+		{
+			execute(SCI_SETREPRESENTATION, reinterpret_cast<WPARAM>(invChar.at(0)), reinterpret_cast<LPARAM>(invChar.at(mode)));
+		}
+
+		if (svp._npcIncludeCcUniEol && svp._npcCustomColor)
+		{
+			setNpcAndCcUniEOL();
+		}
+	}
+	else
+	{
+		execute(SCI_CLEARALLREPRESENTATIONS);
+
+		for (const auto& invChar : g_ccUniEolChars)
+		{
+			execute(SCI_SETREPRESENTATION, reinterpret_cast<WPARAM>(invChar.at(0)), reinterpret_cast<LPARAM>(g_ZWSP));
+			execute(SCI_SETREPRESENTATIONAPPEARANCE, reinterpret_cast<WPARAM>(invChar.at(0)), SC_REPRESENTATION_PLAIN);
+		}
+
+		// SCI_CLEARALLREPRESENTATIONS will also reset CRLF and NPC
+		if (!isSearchResult && svp._eolMode != svp.roundedRectangleText)
+		{
+			setCRLF();
+		}
+
+		if (svp._npcShow)
+		{
+			showNpc();
+			return; // showEOL(isShownEol()) already in showNpc()
+		}
+	}
+
+	// in some case C0, C1 and  Unicode EOL representations are not redrawn correctly on first line
+	// therefore use of showEOL(isShownEol()) instead of redraw()
+	showEOL(isShownEol());
 }
 
 void ScintillaEditView::showIndentGuideLine(bool willBeShowed)
@@ -3063,24 +3173,28 @@ void ScintillaEditView::changeCase(__inout wchar_t * const strWToConvert, const 
 			}
 			break; 
 		} //case LOWERCASE
-		case TITLECASE_FORCE:
-		case TITLECASE_BLEND:
+		case PROPERCASE_FORCE:
+		case PROPERCASE_BLEND:
 		{
 			for (int i = 0; i < nbChars; ++i)
 			{
 				if (::IsCharAlphaW(strWToConvert[i]))
 				{
-					if ((i < 1) ? true : !::IsCharAlphaNumericW(strWToConvert[i - 1]))
+					// Exception for single quote and smart single quote
+					if ((i < 2) ? false :
+						(isCharSingleQuote(strWToConvert[i - 1]) && ::IsCharAlphaNumericW(strWToConvert[i - 2])))
+					{
+						if (caseToConvert == PROPERCASE_FORCE)
+							strWToConvert[i] = (WCHAR)(UINT_PTR)::CharLowerW(reinterpret_cast<LPWSTR>(strWToConvert[i]));
+					}
+					else if ((i < 1) ? true : !::IsCharAlphaNumericW(strWToConvert[i - 1]))
 						strWToConvert[i] = (WCHAR)(UINT_PTR)::CharUpperW(reinterpret_cast<LPWSTR>(strWToConvert[i]));
-					else if (caseToConvert == TITLECASE_FORCE)
-						strWToConvert[i] = (WCHAR)(UINT_PTR)::CharLowerW(reinterpret_cast<LPWSTR>(strWToConvert[i]));
-					//An exception
-					if ((i < 2) ? false : (strWToConvert[i - 1] == L'\'' && ::IsCharAlphaW(strWToConvert[i - 2])))
+					else if (caseToConvert == PROPERCASE_FORCE)
 						strWToConvert[i] = (WCHAR)(UINT_PTR)::CharLowerW(reinterpret_cast<LPWSTR>(strWToConvert[i]));
 				}
 			}
-			break; 
-		} //case TITLECASE
+			break;
+		} //case PROPERCASE
 		case SENTENCECASE_FORCE:
 		case SENTENCECASE_BLEND:
 		{
@@ -3221,64 +3335,90 @@ bool ScintillaEditView::expandWordSelection()
 	return false;
 }
 
-TCHAR * int2str(TCHAR *str, int strLen, int number, int base, int nbChiffre, bool isZeroLeading)
+TCHAR* int2str(TCHAR* str, int strLen, int number, int base, int nbDigits, ColumnEditorParam::leadingChoice lead)
 {
-	if (nbChiffre >= strLen) return NULL;
-	constexpr size_t bufSize = 64;
-	TCHAR f[bufSize] = { '\0' };
-	TCHAR fStr[2] = TEXT("d");
-	if (base == 16)
-		fStr[0] = 'X';
-	else if (base == 8)
-		fStr[0] = 'o';
-	else if (base == 2)
+	if (nbDigits >= strLen) return NULL;
+
+	if (base == 2)
 	{
 		const unsigned int MASK_ULONG_BITFORT = 0x80000000;
 		int nbBits = sizeof(unsigned int) * 8;
-		int nbBit2Shift = (nbChiffre >= nbBits)?nbBits:(nbBits - nbChiffre);
+		int nbBit2Shift = (nbDigits >= nbBits) ? nbBits : (nbBits - nbDigits);
 		unsigned long mask = MASK_ULONG_BITFORT >> nbBit2Shift;
 		int i = 0;
-		for (; mask > 0 ; ++i)
+		for (; mask > 0; ++i)
 		{
-			str[i] = (mask & number)?'1':'0';
+			str[i] = (mask & number) ? '1' : '0';
 			mask >>= 1;
 		}
 		str[i] = '\0';
-	}
+		// str is now leading zero padded
 
-	if (!isZeroLeading)
-	{
-		if (base == 2)
+		if (lead == ColumnEditorParam::spaceLeading)
 		{
-			TCHAR *j = str;
-			for ( ; *j != '\0' ; ++j)
-				if (*j == '1')
+			// replace leading zeros with spaces
+			for (TCHAR* j = str; *j != '\0'; ++j)
+			{
+				if ((*j == '1') || (*(j + 1) == '\0'))
+				{
 					break;
-			wcscpy_s(str, strLen, j);
+				}
+				else
+				{
+					*j = ' ';
+				}
+			}
 		}
-		else
+		else if (lead != ColumnEditorParam::zeroLeading)
 		{
-			// use sprintf or swprintf instead of wsprintf
-			// to make octal format work
-			swprintf(f, bufSize, TEXT("%%%s"), fStr);
-			swprintf(str, strLen, f, number);
+			// left-align within the field width, i.e. pad on right with space
+
+			// first, remove leading zeros
+			for (TCHAR* j = str; *j != '\0'; ++j)
+			{
+				if (*j == '1' || *(j + 1) == '\0')
+				{
+					wcscpy_s(str, strLen, j);
+					break;
+				}
+			}
+			// add trailing spaces to pad out to field width
+			int i = lstrlen(str);
+			for (; i < nbDigits; ++i)
+			{
+				str[i] = ' ';
+			}
+			str[i] = '\0';
 		}
-		int i = lstrlen(str);
-		for ( ; i < nbChiffre ; ++i)
-			str[i] = ' ';
-		str[i] = '\0';
 	}
 	else
 	{
-		if (base != 2)
+		constexpr size_t bufSize = 64;
+		TCHAR f[bufSize] = { '\0' };
+
+		TCHAR fStr[2] = TEXT("d");
+		if (base == 16)
+			fStr[0] = 'X';
+		else if (base == 8)
+			fStr[0] = 'o';
+
+		if (lead == ColumnEditorParam::zeroLeading)
 		{
-			// use sprintf or swprintf instead of wsprintf
-			// to make octal format work
-			swprintf(f, bufSize, TEXT("%%.%d%s"), nbChiffre, fStr);
-			swprintf(str, strLen, f, number);
+			swprintf(f, bufSize, TEXT("%%.%d%s"), nbDigits, fStr);
 		}
-		// else already done.
+		else if (lead == ColumnEditorParam::spaceLeading)
+		{
+			swprintf(f, bufSize, TEXT("%%%d%s"), nbDigits, fStr);
+		}
+		else
+		{
+			// left-align within the field width, i.e. pad on right with space
+			swprintf(f, bufSize, TEXT("%%-%d%s"), nbDigits, fStr);
+		}
+		// use swprintf (or sprintf) instead of wsprintf to make octal format work!
+		swprintf(str, strLen, f, number);
 	}
+
 	return str;
 }
 
@@ -3358,7 +3498,7 @@ void ScintillaEditView::columnReplace(ColumnModeInfos & cmi, const TCHAR *str)
 	}
 }
 
-void ScintillaEditView::columnReplace(ColumnModeInfos & cmi, int initial, int incr, int repeat, UCHAR format)
+void ScintillaEditView::columnReplace(ColumnModeInfos & cmi, int initial, int incr, int repeat, UCHAR format, ColumnEditorParam::leadingChoice lead)
 {
 	assert(repeat > 0);
 
@@ -3372,14 +3512,10 @@ void ScintillaEditView::columnReplace(ColumnModeInfos & cmi, int initial, int in
 	// 0000 00 10 : Oct BASE_08
 	// 0000 00 11 : Bin BASE_02
 
-	// 0000 01 00 : 0 leading
-
 	//Defined in ScintillaEditView.h :
 	//const UCHAR MASK_FORMAT = 0x03;
-	//const UCHAR MASK_ZERO_LEADING = 0x04;
 
 	UCHAR f = format & MASK_FORMAT;
-	bool isZeroLeading = (MASK_ZERO_LEADING & format) != 0;
 
 	int base = 10;
 	if (f == BASE_16)
@@ -3429,7 +3565,7 @@ void ScintillaEditView::columnReplace(ColumnModeInfos & cmi, int initial, int in
 			cmi[i]._selLpos += totalDiff;
 			cmi[i]._selRpos += totalDiff;
 
-			int2str(str, stringSize, numbers.at(i), base, kib, isZeroLeading);
+			int2str(str, stringSize, numbers.at(i), base, kib, lead);
 
 			const bool hasVirtualSpc = cmi[i]._nbVirtualAnchorSpc > 0;
 			if (hasVirtualSpc) // if virtual space is present, then insert space
@@ -3552,7 +3688,7 @@ void ScintillaEditView::hideLines()
 	size_t endMarker = endLine + 1;
 
 	// Remove all previous markers in between new ones
-	for (size_t i = startMarker; i <= endMarker; ++i)
+	for (size_t i = startMarker + 1; i < endMarker; ++i)
 		removeMarker(i);
 
 	// When hiding lines just below/above other hidden lines,
@@ -3595,10 +3731,11 @@ bool ScintillaEditView::markerMarginClick(intptr_t lineNumber)
 
 	if (!openPresent && !closePresent)
 		return false;
-
+		
 	//Special func on buffer. First call show with location of opening marker. Then remove the marker manually
 	if (openPresent)
 	{
+		closePresent = false; // when there are two overlapping markers, always open the lower section
 		_currentBuffer->setHideLineChanged(false, lineNumber);
 	}
 
@@ -3692,7 +3829,19 @@ void ScintillaEditView::runMarkers(bool doHide, size_t searchStart, bool endOfDo
 		for (auto i = searchStart; i < maxLines; ++i)
 		{
 			auto state = execute(SCI_MARKERGET, i);
-			if ( ((state & (1 << MARK_HIDELINESEND)) != 0) )
+			if ((state & (1 << MARK_HIDELINESBEGIN)) != 0 && !isInSection)
+			{
+				isInSection = true;
+				if (doDelete)
+				{
+					execute(SCI_MARKERDELETE, i, MARK_HIDELINESBEGIN);
+				}
+				else
+				{
+					startShowing = i + 1;
+				}
+			}
+			else if ( (state & (1 << MARK_HIDELINESEND)) != 0)
 			{
 				if (doDelete)
 				{
@@ -3701,9 +3850,10 @@ void ScintillaEditView::runMarkers(bool doHide, size_t searchStart, bool endOfDo
 					{
 						return;	//done, only single section requested
 					}	//otherwise keep going
+					isInSection = false;
 				}
-				 else if (isInSection)
-				 {
+				else if (isInSection)
+				{
 					if (startShowing >= i)
 					{	//because of fold skipping, we passed the close tag. In that case we cant do anything
 						if (!endOfDoc)
@@ -3712,6 +3862,7 @@ void ScintillaEditView::runMarkers(bool doHide, size_t searchStart, bool endOfDo
 						}
 						else
 						{
+							isInSection = false; // assume we passed the close tag
 							continue;
 						}
 					}
@@ -3721,18 +3872,6 @@ void ScintillaEditView::runMarkers(bool doHide, size_t searchStart, bool endOfDo
 						return;	//done, only single section requested
 					}	//otherwise keep going
 					isInSection = false;
-				}
-			}
-			if ((state & (1 << MARK_HIDELINESBEGIN)) != 0)
-			{
-				if (doDelete)
-				{
-					execute(SCI_MARKERDELETE, i, MARK_HIDELINESBEGIN);
-				}
-				else
-				{
-					isInSection = true;
-					startShowing = i+1;
 				}
 			}
 
@@ -3819,7 +3958,8 @@ void ScintillaEditView::sortLines(size_t fromLine, size_t toLine, ISorter* pSort
 	const auto startPos = execute(SCI_POSITIONFROMLINE, fromLine);
 	const auto endPos = execute(SCI_POSITIONFROMLINE, toLine) + execute(SCI_LINELENGTH, toLine);
 	const generic_string text = getGenericTextAsString(startPos, endPos);
-	std::vector<generic_string> splitText = stringSplit(text, getEOLString());
+	std::vector<generic_string> splitText;
+	stringSplit(text, getEOLString(), splitText);
 	const size_t lineCount = execute(SCI_GETLINECOUNT);
 	const bool sortEntireDocument = toLine == lineCount - 1;
 	if (!sortEntireDocument)
@@ -3830,8 +3970,10 @@ void ScintillaEditView::sortLines(size_t fromLine, size_t toLine, ISorter* pSort
 		}
 	}
 	assert(toLine - fromLine + 1 == splitText.size());
-	const std::vector<generic_string> sortedText = pSort->sort(splitText);
-	generic_string joined = stringJoin(sortedText, getEOLString());
+	pSort->sort(splitText);
+	generic_string joined;
+	stringJoin(splitText, getEOLString(), joined);
+
 	if (sortEntireDocument)
 	{
 		assert(joined.length() == text.length());
@@ -4148,7 +4290,8 @@ void ScintillaEditView::removeAnyDuplicateLines()
 	const auto startPos = execute(SCI_POSITIONFROMLINE, fromLine);
 	const auto endPos = execute(SCI_POSITIONFROMLINE, toLine) + execute(SCI_LINELENGTH, toLine);
 	const generic_string text = getGenericTextAsString(startPos, endPos);
-	std::vector<generic_string> linesVect = stringSplit(text, getEOLString());
+	std::vector<generic_string> linesVect;
+	stringSplit(text, getEOLString(), linesVect);
 	const size_t lineCount = execute(SCI_GETLINECOUNT);
 
 	const bool doingEntireDocument = toLine == lineCount - 1;
@@ -4164,7 +4307,8 @@ void ScintillaEditView::removeAnyDuplicateLines()
 	size_t newSize = vecRemoveDuplicates(linesVect);
 	if (origSize != newSize)
 	{
-		generic_string joined = stringJoin(linesVect, getEOLString());
+		generic_string joined;
+		stringJoin(linesVect, getEOLString(), joined);
 		if (!doingEntireDocument)
 		{
 			joined += getEOLString();

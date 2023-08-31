@@ -119,10 +119,10 @@ public:
 
 	void setTabStyle(const BOOL & bDrawOgLine) {
 		_bDrawOgLine = bDrawOgLine;
-		RedrawWindow(_hContTab, NULL, NULL, 0);
+		::RedrawWindow(_hContTab, nullptr, nullptr, RDW_INVALIDATE);
 	};
 
-    virtual void destroy() {
+	void destroy() override{
 		for (int iTb = static_cast<int>(_vTbData.size()); iTb > 0; iTb--)
 		{
 			delete _vTbData[iTb-1];
@@ -144,7 +144,7 @@ protected :
 		return (((DockingCont *)(::GetWindowLongPtr(hwnd, GWLP_USERDATA)))->runProcTab(hwnd, Message, wParam, lParam));
 	};
 
-    virtual intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 
 	// drawing functions
 	void drawCaptionItem(DRAWITEMSTRUCT *pDrawItemStruct);
@@ -180,6 +180,7 @@ private:
 
 	// horizontal font for caption and tab
 	HFONT _hFont = nullptr;
+	HFONT _hFontCaption = nullptr;
 
 	// caption params
 	BOOL _isTopCaption = FALSE;
@@ -188,7 +189,7 @@ private:
 	BOOL _isMouseDown = FALSE;
 	BOOL _isMouseClose = FALSE;
 	BOOL _isMouseOver = FALSE;
-	RECT _rcCaption = {};
+	RECT _rcCaption{};
 	
 	// tab style
 	BOOL _bDrawOgLine = FALSE;

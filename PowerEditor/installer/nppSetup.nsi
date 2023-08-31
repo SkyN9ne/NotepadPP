@@ -262,59 +262,38 @@ FunctionEnd
 
 !include "nsisInclude\themes.nsh"
 
-!include "StrFunc.nsh"
-${Using:StrFunc} StrStr
-
-Var muiVerbStr
-Var nppSubStr
 
 ${MementoSection} "Context Menu Entry" explorerContextMenu
 
-	${If} $WinVer == "11"
+	SetOverwrite try
+	SetOutPath "$INSTDIR\contextMenu\"
 	
-		; Clean up the hack of v8.5 installer
-		ReadRegStr $muiVerbStr HKLM "SOFTWARE\Classes\*\shell\pintohome" MUIVerb
-		${StrStr} $nppSubStr $muiVerbStr "Notepad++"
-		; Make sure there's an entry, and the entry belong to Notepad++ before deleting it
-		${If} $muiVerbStr != ""
-			${AndIf} $nppSubStr != ""  ; it contains "Notepad++"
-				DeleteRegKey HKLM "SOFTWARE\Classes\*\shell\pintohome"
-		${EndIf}
-		
-		; Install the new Windows 11 "Edit with Notepad++" menu entry
-		!ifdef ARCHARM64
-			File /oname=$INSTDIR\NppModernShell.msix "..\binarm64\NppModernShell.msix"
-			File /oname=$INSTDIR\NppModernShell.dll "..\binarm64\NppModernShell.dll"
-		!else ; !ifdef ARCH64
-			File /oname=$INSTDIR\NppModernShell.msix "..\bin64\NppModernShell.msix"
-			File /oname=$INSTDIR\NppModernShell.dll "..\bin64\NppModernShell.dll"
-		!endif
-		Exec 'rundll32.exe"$INSTDIR\NppModernShell.dll,RegisterSparsePackage"'
-		
-	${Else} ; the old "Edit with Notepad++" menu entry still works under Windows 10 and previous OS
-	
-		SetOverwrite try
-		SetOutPath "$INSTDIR\"
-		
-		; There is no need to keep x86 NppShell_06.dll in 64 bit installer
-		; But in 32bit installer both the Dlls are required
-		; As user can install 32bit npp version on x64 bit machine, that time x64 bit NppShell is required.
-		
-		!ifdef ARCH64
-			File /oname=$INSTDIR\NppShell_06.dll "..\bin\NppShell64_06.dll"
-		!else ifdef ARCHARM64
-			File /oname=$INSTDIR\NppShell_06.dll "..\binarm64\NppShell64.dll"
-		!else
-			${If} ${RunningX64}
-				File /oname=$INSTDIR\NppShell_06.dll "..\bin\NppShell64_06.dll"
-			${Else}
-				File "..\bin\NppShell_06.dll"
-			${EndIf}
-		!endif
-		Exec 'regsvr32 /s "$INSTDIR\NppShell_06.dll"'
 
-	${EndIf}
+	IfFileExists $INSTDIR\contextmenu\NppShell.dll 0 +2
+		ExecWait 'rundll32.exe "$INSTDIR\contextmenu\NppShell.dll",CleanupDll'
+
+
+	!ifdef ARCH64
+		File /oname=$INSTDIR\contextMenu\NppShell.msix "..\bin64\NppShell.msix"
+		File /oname=$INSTDIR\contextMenu\NppShell.dll "..\bin64\NppShell.x64.dll"
+	!else ifdef ARCHARM64
+		File /oname=$INSTDIR\contextMenu\NppShell.msix "..\binarm64\NppShell.msix"
+		File /oname=$INSTDIR\contextMenu\NppShell.dll "..\binarm64\NppShell.arm64.dll"
+	!else
+		; We need to test which arch we are running on, since 32bit exe can be run on both 32bit and 64bit Windows.
+		${If} ${RunningX64}
+			; We are running on 64bit Windows, so we need the msix as well, since it might be Windows 11.
+			File /oname=$INSTDIR\contextMenu\NppShell.msix "..\bin64\NppShell.msix"
+			File /oname=$INSTDIR\contextMenu\NppShell.dll "..\bin64\NppShell.x64.dll"
+		${Else}
+			; We are running on 32bit Windows, so no need for the msix file, since there is no way this could even be upgraded to Windows 11.
+			File /oname=$INSTDIR\contextMenu\NppShell.dll "..\bin\NppShell.x86.dll"
+		${EndIf}    
+
+	!endif
 	
+	ExecWait 'regsvr32 /s "$INSTDIR\contextMenu\NppShell.dll"'
+
 ${MementoSectionEnd}
 
 ${MementoSectionDone}
@@ -351,6 +330,6 @@ Section -FinishSection
   Call writeInstallInfoInRegistry
 SectionEnd
 
-BrandingText "Software is like sex: It's better when it's free"
+BrandingText "The best things in life are free. Notepad++ is free so Notepad++ is the best"
 
 ; eof

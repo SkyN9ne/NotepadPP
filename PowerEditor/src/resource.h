@@ -1,5 +1,5 @@
 // This file is part of Notepad++ project
-// Copyright (C)2021 Don HO <don.h@free.fr>
+// Copyright (C)2023 Don HO <don.h@free.fr>
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,12 +19,14 @@
 //
 // Notepad++ version: begin
 //
-#define NOTEPAD_PLUS_VERSION TEXT("Notepad++ v8.5")
+#define NOTEPAD_PLUS_VERSION TEXT("Notepad++ v8.5.6")
 
 // should be X.Y : ie. if VERSION_DIGITALVALUE == 4, 7, 1, 0 , then X = 4, Y = 71
 // ex : #define VERSION_VALUE TEXT("5.63\0")
-#define VERSION_VALUE TEXT("8.5\0")
-#define VERSION_DIGITALVALUE 8, 5, 0, 0
+#define VERSION_INTERNAL_VALUE TEXT("8.56\0")
+
+#define VERSION_PRODUCT_VALUE TEXT("8.5.6\0")
+#define VERSION_DIGITALVALUE 8, 5, 6, 0
 
 // Notepad++ version: end
 
@@ -417,6 +419,9 @@
 
 #define MARKER_PLUGINS          1
 #define MARKER_PLUGINS_LIMIT   15
+
+#define INDICATOR_PLUGINS          9  // indicators 8 and below are reserved by Notepad++ (URL_INDIC=8)
+#define INDICATOR_PLUGINS_LIMIT   20  // indicators 21 and up are reserved by Notepad++ (SCE_UNIVERSAL_FOUND_STYLE_EXT5=21)
 
 
 

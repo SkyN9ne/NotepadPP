@@ -36,12 +36,23 @@ void StaticDialog::destroy()
 	::DestroyWindow(_hSelf);
 }
 
+void StaticDialog::getMappedChildRect(HWND hChild, RECT& rcChild) const
+{
+	::GetClientRect(hChild, &rcChild);
+	::MapWindowPoints(hChild, _hSelf, reinterpret_cast<LPPOINT>(&rcChild), 2);
+}
+
+void StaticDialog::getMappedChildRect(int idChild, RECT& rcChild) const
+{
+	const HWND hChild = ::GetDlgItem(_hSelf, idChild);
+	getMappedChildRect(hChild, rcChild);
+}
+
 void StaticDialog::redrawDlgItem(const int nIDDlgItem, bool forceUpdate) const
 {
 	RECT rcDlgItem{};
 	const HWND hDlgItem = ::GetDlgItem(_hSelf, nIDDlgItem);
-	::GetClientRect(hDlgItem, &rcDlgItem);
-	::MapWindowPoints(hDlgItem, _hSelf, reinterpret_cast<LPPOINT>(&rcDlgItem), 2);
+	getMappedChildRect(hDlgItem, rcDlgItem);
 	::InvalidateRect(_hSelf, &rcDlgItem, TRUE);
 
 	if (forceUpdate)
@@ -64,7 +75,7 @@ POINT StaticDialog::getTopPoint(HWND hwnd, bool isLeft) const
 	return p;
 }
 
-void StaticDialog::goToCenter()
+void StaticDialog::goToCenter(UINT swpFlags)
 {
 	RECT rc{};
 	::GetClientRect(_hParent, &rc);
@@ -76,7 +87,7 @@ void StaticDialog::goToCenter()
 	int x = center.x - (_rc.right - _rc.left)/2;
 	int y = center.y - (_rc.bottom - _rc.top)/2;
 
-	::SetWindowPos(_hSelf, HWND_TOP, x, y, _rc.right - _rc.left, _rc.bottom - _rc.top, SWP_SHOWWINDOW);
+	::SetWindowPos(_hSelf, HWND_TOP, x, y, _rc.right - _rc.left, _rc.bottom - _rc.top, swpFlags);
 }
 
 void StaticDialog::display(bool toShow, bool enhancedPositioningCheckWhenShowing) const
