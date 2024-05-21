@@ -84,7 +84,7 @@ DWORD WINAPI Notepad_plus::monitorFileOnChange(void * params)
 					if (pos == 2)
 						fn.replace(pos, 2, TEXT("\\"));
 
-					if (OrdinalIgnoreCaseCompareStrings(fullFileName, fn.c_str()) == 0)
+					if (wcscmp(fullFileName, fn.c_str()) == 0)
 					{
 						if (dwAction == FILE_ACTION_MODIFIED)
 						{
@@ -263,12 +263,12 @@ BufferID Notepad_plus::doOpen(const generic_string& fileName, bool isRecursive, 
 	// Search case 1 & 2 firstly
 	BufferID foundBufID = MainFileManager.getBufferFromName(targetFileName.c_str());
 
-	if (foundBufID == BUFFER_INVALID)
-		fileName2Find = longFileName;
-
 	// if case 1 & 2 not found, search case 3
 	if (foundBufID == BUFFER_INVALID)
+	{
+		fileName2Find = longFileName;
 		foundBufID = MainFileManager.getBufferFromName(fileName2Find.c_str());
+	}
 
 	// If we found the document, then we don't open the existing doc. We return the found buffer ID instead.
     if (foundBufID != BUFFER_INVALID && !isSnapshotMode)
@@ -589,7 +589,8 @@ bool Notepad_plus::doReload(BufferID id, bool alert)
 	// many settings such as update status bar, clickable link etc.
 	activateBuffer(id, currentView(), true);
 
-	if (NppParameters::getInstance().getSVP()._isChangeHistoryEnabled)
+	auto svp = NppParameters::getInstance().getSVP();
+	if (svp._isChangeHistoryMarginEnabled || svp._isChangeHistoryIndicatorEnabled)
 		clearChangesHistory();
 
 	return res;
@@ -628,13 +629,18 @@ bool Notepad_plus::doSave(BufferID id, const TCHAR * filename, bool isCopy)
 		_pluginsManager.notify(&scnN);
 	}
 
-	if (res == SavingStatus::SaveWritingFailed)
+	if (res == SavingStatus::NotEnoughRoom)
 	{
 		_nativeLangSpeaker.messageBox("NotEnoughRoom4Saving",
 			_pPublicInterface->getHSelf(),
-			TEXT("Failed to save file.\nIt seems there's not enough space on disk to save file."),
+			TEXT("Failed to save file.\nIt seems there's not enough space on disk to save file. Your file is not saved."),
 			TEXT("Save failed"),
 			MB_OK);
+	}
+	else if (res == SavingStatus::SaveWritingFailed)
+	{
+		wstring errorMessage = GetLastErrorAsString(GetLastError());
+		::MessageBox(_pPublicInterface->getHSelf(), errorMessage.c_str(), TEXT("Save failed"), MB_OK | MB_ICONWARNING);
 	}
 	else if (res == SavingStatus::SaveOpenFailed)
 	{
@@ -650,9 +656,12 @@ bool Notepad_plus::doSave(BufferID id, const TCHAR * filename, bool isCopy)
 		else
 		{
 			// try to open Notepad++ in admin mode
-			bool isSnapshotMode = NppParameters::getInstance().getNppGUI().isSnapshotMode();
-			if (isSnapshotMode) // if both rememberSession && backup mode are enabled
-			{                   // Open the 2nd Notepad++ instance in Admin mode, then close the 1st instance.
+			const NppGUI& nppGui = NppParameters::getInstance().getNppGUI();
+			bool isSnapshotMode = nppGui.isSnapshotMode();
+			bool isAlwaysInMultiInstMode = nppGui._multiInstSetting == multiInst;
+			if (isSnapshotMode && !isAlwaysInMultiInstMode) // if both rememberSession && backup mode are enabled and "Always In Multi-Instance Mode" option not activated:
+			{                                               // Open the 2nd Notepad++ instance in Admin mode, then close the 1st instance.
+
 				int openInAdminModeRes = _nativeLangSpeaker.messageBox("OpenInAdminMode",
 				_pPublicInterface->getHSelf(),
 				TEXT("This file cannot be saved and it may be protected.\rDo you want to launch Notepad++ in Administrator mode?"),
@@ -686,8 +695,9 @@ bool Notepad_plus::doSave(BufferID id, const TCHAR * filename, bool isCopy)
 
 				}
 			}
-			else // rememberSession && backup mode are not both enabled
-			{    // open only the file to save in Notepad++ of Administrator mode by keeping the current instance.
+			else // rememberSession && backup mode are not both enabled, or "Always In Multi-Instance Mode" option is ON:
+			{    // Open only the file to save in Notepad++ of Administrator mode by keeping the current instance.
+
 				int openInAdminModeRes = _nativeLangSpeaker.messageBox("OpenInAdminModeWithoutCloseCurrent",
 				_pPublicInterface->getHSelf(),
 				TEXT("The file cannot be saved and it may be protected.\rDo you want to launch Notepad++ in Administrator mode?"),
@@ -1615,7 +1625,7 @@ bool Notepad_plus::fileSave(BufferID id)
 				constexpr int temBufLen = 32;
 				TCHAR tmpbuf[temBufLen]{};
 				time_t ltime = time(0);
-				struct tm *today;
+				const struct tm* today;
 
 				today = localtime(&ltime);
 				if (today)
@@ -1783,6 +1793,17 @@ bool Notepad_plus::fileSaveAs(BufferID id, bool isSaveCopy)
 
 	fDlg.setExtIndex(langTypeIndex + 1); // +1 for "All types"
 
+	generic_string localizedTitle;
+	if (isSaveCopy)
+	{
+		localizedTitle = _nativeLangSpeaker.getNativeLangMenuString(IDM_FILE_SAVECOPYAS, L"Save a Copy As", true);
+	}
+	else
+	{
+		localizedTitle = _nativeLangSpeaker.getNativeLangMenuString(IDM_FILE_SAVEAS, L"Save As", true);
+	}
+	fDlg.setTitle(localizedTitle.c_str());
+
 	const generic_string checkboxLabel = _nativeLangSpeaker.getLocalizedStrFromID("file-save-assign-type",
 		TEXT("&Append extension"));
 	fDlg.enableFileTypeCheckbox(checkboxLabel, !defaultAllTypes);
@@ -1866,8 +1887,8 @@ bool Notepad_plus::fileRename(BufferID id)
 		fDlg.setFolder(buf->getFullPathName());
 		fDlg.setDefFileName(buf->getFileName());
 
-		std::wstring title = _nativeLangSpeaker.getLocalizedStrFromID("file-rename-title", L"Rename");
-		fDlg.setTitle(title.c_str());
+		wstring localizedRename = _nativeLangSpeaker.getNativeLangMenuString(IDM_FILE_RENAME, L"Rename", true);
+		fDlg.setTitle(localizedRename.c_str());
 
 		std::wstring fn = fDlg.doSaveDlg();
 
@@ -2002,6 +2023,8 @@ bool Notepad_plus::fileDelete(BufferID id)
 void Notepad_plus::fileOpen()
 {
 	CustomFileDialog fDlg(_pPublicInterface->getHSelf());
+	wstring localizedTitle = _nativeLangSpeaker.getNativeLangMenuString(IDM_FILE_OPEN, L"Open", true);
+	fDlg.setTitle(localizedTitle.c_str());
 	fDlg.setExtFilter(TEXT("All types"), TEXT(".*"));
 
 	setFileOpenSaveDlgFilters(fDlg, true);
@@ -2099,9 +2122,13 @@ void Notepad_plus::loadLastSession()
 	_isFolding = false;
 }
 
-bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, bool shouldLoadFileBrowser)
+bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, const wchar_t* userCreatedSessionName)
 {
 	NppParameters& nppParam = NppParameters::getInstance();
+	const NppGUI& nppGUI = nppParam.getNppGUI();
+
+	nppParam.setTheWarningHasBeenGiven(false);
+
 	bool allSessionFilesLoaded = true;
 	BufferID lastOpened = BUFFER_INVALID;
 	//size_t i = 0;
@@ -2109,6 +2136,17 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, bool shou
 	switchEditViewTo(MAIN_VIEW);	//open files in main
 
 	int mainIndex2Update = -1;
+
+	// no session
+	if (!session.nbMainFiles() && !session.nbSubFiles())
+	{
+		Buffer* buf = getCurrentBuffer();
+		if (nppParam.getNativeLangSpeaker()->isRTL() && nppParam.getNativeLangSpeaker()->isEditZoneRTL())
+			buf->setRTL(true);
+
+		_mainEditView.changeTextDirection(buf->isRTL());
+		return true;
+	}
 
 	for (size_t i = 0; i < session.nbMainFiles() ; )
 	{
@@ -2140,7 +2178,9 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, bool shou
 		}
 		else
 		{
-			lastOpened = BUFFER_INVALID;
+			BufferID foundBufID = MainFileManager.getBufferFromName(pFn);
+			if (foundBufID == BUFFER_INVALID)
+				lastOpened = nppGUI._keepSessionAbsentFileEntries ? MainFileManager.newPlaceholderDocument(pFn, MAIN_VIEW, userCreatedSessionName) : BUFFER_INVALID;
 		}
 		if (isWow64Off)
 		{
@@ -2163,8 +2203,6 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, bool shou
 				
 				if (!id) // it could be due to the hidden language from the sub-menu "Languages"
 				{
-					const NppGUI& nppGUI = nppParam.getNppGUI();
-
 					for (size_t k = 0; k < nppGUI._excludedLangList.size(); ++k) // try to find it in exclude lang list
 					{
 						if (nppGUI._excludedLangList[k]._langName == pLn)
@@ -2202,6 +2240,10 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, bool shou
 
 			if (isSnapshotMode && session._mainViewFiles[i]._backupFilePath != TEXT("") && PathFileExists(session._mainViewFiles[i]._backupFilePath.c_str()))
 				buf->setDirty(true);
+
+			buf->setRTL(session._mainViewFiles[i]._isRTL);
+			if (i == 0 && session._activeMainIndex == 0)
+				_mainEditView.changeTextDirection(buf->isRTL());
 
 			_mainDocTab.setIndividualTabColour(lastOpened, session._mainViewFiles[i]._individualTabColour);
 
@@ -2246,30 +2288,28 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, bool shou
 			continue;	//skip session files, not supporting recursive sessions or embedded workspace files
 		}
 
-		BufferID clonedBuf = _mainDocTab.findBufferByName(pFn);
-		if (clonedBuf != BUFFER_INVALID)
-		{
-			loadBufferIntoView(clonedBuf, SUB_VIEW);
-			++k;
-			continue;
-		}
 		bool isWow64Off = false;
 		if (!PathFileExists(pFn))
 		{
 			nppParam.safeWow64EnableWow64FsRedirection(FALSE);
 			isWow64Off = true;
 		}
+
 		if (PathFileExists(pFn))
 		{
-			if (isSnapshotMode && session._subViewFiles[k]._backupFilePath != TEXT(""))
-				lastOpened = doOpen(pFn, false, false, session._subViewFiles[k]._encoding, session._subViewFiles[k]._backupFilePath.c_str(), session._subViewFiles[k]._originalFileLastModifTimestamp);
-			else
-				lastOpened = doOpen(pFn, false, false, session._subViewFiles[k]._encoding);
-
 			//check if already open in main. If so, clone
-			if (_mainDocTab.getIndexByBuffer(lastOpened) != -1)
+			BufferID clonedBuf = _mainDocTab.findBufferByName(pFn);
+			if (clonedBuf != BUFFER_INVALID)
 			{
-				loadBufferIntoView(lastOpened, SUB_VIEW);
+				loadBufferIntoView(clonedBuf, SUB_VIEW);
+				lastOpened = clonedBuf;
+			}
+			else
+			{
+				if (isSnapshotMode && session._subViewFiles[k]._backupFilePath != TEXT(""))
+					lastOpened = doOpen(pFn, false, false, session._subViewFiles[k]._encoding, session._subViewFiles[k]._backupFilePath.c_str(), session._subViewFiles[k]._originalFileLastModifTimestamp);
+				else
+					lastOpened = doOpen(pFn, false, false, session._subViewFiles[k]._encoding);
 			}
 		}
 		else if (isSnapshotMode && PathFileExists(session._subViewFiles[k]._backupFilePath.c_str()))
@@ -2278,8 +2318,11 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, bool shou
 		}
 		else
 		{
-			lastOpened = BUFFER_INVALID;
+			BufferID foundBufID = MainFileManager.getBufferFromName(pFn);
+			if (foundBufID == BUFFER_INVALID)
+				lastOpened = nppGUI._keepSessionAbsentFileEntries ? MainFileManager.newPlaceholderDocument(pFn, SUB_VIEW, userCreatedSessionName) : BUFFER_INVALID;
 		}
+
 		if (isWow64Off)
 		{
 			nppParam.safeWow64EnableWow64FsRedirection(TRUE);
@@ -2328,6 +2371,8 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, bool shou
 
 			if (isSnapshotMode && session._subViewFiles[k]._backupFilePath != TEXT("") && PathFileExists(session._subViewFiles[k]._backupFilePath.c_str()))
 				buf->setDirty(true);
+
+			buf->setRTL(session._subViewFiles[k]._isRTL);
 
 			_subDocTab.setIndividualTabColour(lastOpened, session._subViewFiles[k]._individualTabColour);
 
@@ -2391,10 +2436,21 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, bool shou
 	if (_pDocumentListPanel)
 		_pDocumentListPanel->reload();
 
-	if (shouldLoadFileBrowser && !session._fileBrowserRoots.empty())
+	if (userCreatedSessionName && !session._fileBrowserRoots.empty())
 	{
-		// Force launch file browser and add roots
+		// If the session is user's created session but not session.xml, we force to launch Folder as Workspace and add roots
 		launchFileBrowser(session._fileBrowserRoots, session._fileBrowserSelectedItem, true);
+	}
+
+	// Especially File status auto-detection set on "Enable for all opened files":  nppGUI._fileAutoDetection & cdEnabledOld
+	// when "Remember inaccessible files from past session" is enabled:             nppGUI._keepSessionAbsentFileEntries
+	// there are some (or 1) absent files:                                          nppParam.theWarningHasBeenGiven()
+	// and user want to create the placeholders for these files:                    nppParam.isPlaceHolderEnabled()
+	//
+	// When above conditions are true, the created placeholders are not read-only, due to the lack of file-detection on them.
+	if (nppGUI._keepSessionAbsentFileEntries && nppParam.theWarningHasBeenGiven() && nppParam.isPlaceHolderEnabled() && (nppGUI._fileAutoDetection & cdEnabledOld))
+	{
+		checkModifiedDocument(false); // so here we launch file-detection for all placeholders manually
 	}
 
 	return allSessionFilesLoaded;
@@ -2418,6 +2474,8 @@ bool Notepad_plus::fileLoadSession(const TCHAR *fn)
 			fDlg.setDefExt(ext);
 		}
 		fDlg.setExtFilter(TEXT("All types"), TEXT(".*"));
+		wstring localizedTitle = _nativeLangSpeaker.getNativeLangMenuString(IDM_FILE_LOADSESSION, L"Load Session", true);
+		fDlg.setTitle(localizedTitle.c_str());
 		sessionFileName = fDlg.doOpenSingleFileDlg();
 	}
 	else
@@ -2425,7 +2483,6 @@ bool Notepad_plus::fileLoadSession(const TCHAR *fn)
 		if (PathFileExists(fn))
 			sessionFileName = fn;
 	}
-
 
 	NppParameters& nppParam = NppParameters::getInstance();
 	const NppGUI & nppGUI = nppParam.getNppGUI();
@@ -2443,38 +2500,25 @@ bool Notepad_plus::fileLoadSession(const TCHAR *fn)
 			TCHAR nppFullPath[MAX_PATH]{};
 			::GetModuleFileName(NULL, nppFullPath, MAX_PATH);
 
-
 			generic_string args = TEXT("-multiInst -nosession -openSession ");
 			args += TEXT("\"");
 			args += sessionFileName;
 			args += TEXT("\"");
-			::ShellExecute(_pPublicInterface->getHSelf(), TEXT("open"), nppFullPath, args.c_str(), TEXT("."), SW_SHOW);
-			result = true;
+			if (::ShellExecute(_pPublicInterface->getHSelf(), TEXT("open"), nppFullPath, args.c_str(), TEXT("."), SW_SHOW) > (HINSTANCE)32)
+				result = true;
 		}
 		else
 		{
-			bool isAllSuccessful = true;
 			Session session2Load;
 
 			if (nppParam.loadSession(session2Load, sessionFileName.c_str()))
 			{
 				const bool isSnapshotMode = false;
-				const bool shouldLoadFileBrowser = true;
-				isAllSuccessful = loadSession(session2Load, isSnapshotMode, shouldLoadFileBrowser);
-				result = true;
-				if (isEmptyNpp && (nppGUI._multiInstSetting == multiInstOnSession || nppGUI._multiInstSetting == multiInst))
+				result = loadSession(session2Load, isSnapshotMode, sessionFileName.c_str());
+
+				if (isEmptyNpp && nppGUI._multiInstSetting == multiInstOnSession)
 					nppParam.setLoadedSessionFilePath(sessionFileName);
 			}
-			if (!isAllSuccessful)
-				nppParam.writeSession(session2Load, sessionFileName.c_str());
-		}
-		if (result == false)
-		{
-			_nativeLangSpeaker.messageBox("SessionFileInvalidError",
-				NULL,
-				TEXT("Session file is either corrupted or not valid."),
-				TEXT("Could not Load Session"),
-				MB_OK);
 		}
 	}
 
@@ -2483,7 +2527,7 @@ bool Notepad_plus::fileLoadSession(const TCHAR *fn)
 
 const TCHAR * Notepad_plus::fileSaveSession(size_t nbFile, TCHAR ** fileNames, const TCHAR *sessionFile2save, bool includeFileBrowser)
 {
-	if (sessionFile2save)
+	if (sessionFile2save && (lstrlen(sessionFile2save) > 0))
 	{
 		Session currentSession;
 		if ((nbFile) && (fileNames))
@@ -2530,12 +2574,16 @@ const TCHAR * Notepad_plus::fileSaveSession(size_t nbFile, TCHAR ** fileNames)
 	}
 	fDlg.setExtFilter(TEXT("All types"), TEXT(".*"));
 	const bool isCheckboxActive = _pFileBrowser && !_pFileBrowser->isClosed();
-	const generic_string checkboxLabel = _nativeLangSpeaker.getLocalizedStrFromID("session-save-folder-as-workspace",
-		TEXT("Save Folder as Workspace"));
+	const generic_string checkboxLabel = _nativeLangSpeaker.getLocalizedStrFromID("session-save-folder-as-workspace", L"Save Folder as Workspace");
 	fDlg.setCheckbox(checkboxLabel.c_str(), isCheckboxActive);
+	wstring localizedTitle = _nativeLangSpeaker.getNativeLangMenuString(IDM_FILE_SAVESESSION, L"Save Session", true);
+	fDlg.setTitle(localizedTitle.c_str());
 	generic_string sessionFileName = fDlg.doSaveDlg();
 
-	return fileSaveSession(nbFile, fileNames, sessionFileName.c_str(), fDlg.getCheckboxState());
+	if (!sessionFileName.empty())
+		return fileSaveSession(nbFile, fileNames, sessionFileName.c_str(), fDlg.getCheckboxState());
+
+	return NULL;
 }
 
 

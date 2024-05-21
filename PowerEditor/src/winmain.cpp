@@ -20,6 +20,7 @@
 #include "MiniDumper.h"			//Write dump files
 #include "verifySignedfile.h"
 #include "NppDarkMode.h"
+#include "dpiManagerV2.h"
 #include <memory>
 
 typedef std::vector<std::wstring> ParamVector;
@@ -377,10 +378,13 @@ void stripIgnoredParams(ParamVector & params)
 } // namespace
 
 
+std::chrono::steady_clock::time_point g_nppStartTimePoint{};
 
 
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstance*/, _In_ PWSTR pCmdLine, _In_ int /*nShowCmd*/)
 {
+	g_nppStartTimePoint = std::chrono::steady_clock::now();
+
 	bool TheFirstOne = true;
 	::SetLastError(NO_ERROR);
 	::CreateMutex(NULL, false, TEXT("nppInstance"));
@@ -499,6 +503,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstance
 	NppGUI & nppGui = nppParameters.getNppGUI();
 
 	NppDarkMode::initDarkMode();
+	DPIManagerV2::initDpiAPI();
 
 	bool doUpdateNpp = nppGui._autoUpdateOpt._doAutoUpdate;
 	bool doUpdatePluginList = nppGui._autoUpdateOpt._doAutoUpdate;
@@ -725,7 +730,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstance
 	}
 	catch (int i)
 	{
-		TCHAR str[50] = TEXT("God Damned Exception : ");
+		wchar_t str[50] = L"God Damned Exception:";
 		TCHAR code[10];
 		wsprintf(code, TEXT("%d"), i);
 		wcscat_s(str, code);

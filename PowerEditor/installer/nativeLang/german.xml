@@ -14,7 +14,7 @@ Translation note:
 	or a copy at: http://www.should.keepfree.de/N++/german.xml.txt (rename to german.xml)
 -->
 <NotepadPlus>
-	<Native-Langue name="Deutsch" filename="german.xml" version="2023.08.05"><!-- basiert auf english.xml vom 04.08.2023 -->
+	<Native-Langue name="Deutsch" filename="german.xml" version="2024-03-18"><!-- basiert auf english.xml 8.6.5 vom 10.03.2024 -->
 		<Menu>
 			<Main>
 				<!-- Main Menu Entries -->
@@ -48,6 +48,8 @@ Translation note:
 					<Item subMenuId="edit-blankOperations" name="Nicht &amp;druckbare Zeichen"/>
 					<Item subMenuId="edit-pasteSpecial" name="Einf&amp;ügen speziell"/>
 					<Item subMenuId="edit-onSelection" name="Mit Auswahl"/>
+					<Item subMenuId="edit-multiSelectALL" name="Mehrfachauswahl ALLE"/>
+					<Item subMenuId="edit-multiSelectNext" name="Mehrfachauswahl Nächstes"/>
 					<Item subMenuId="search-changeHistory" name="Änderungs-Historie"/>
 					<Item subMenuId="search-markAll" name="&amp;Alle Vorkommen hervorheben"/>
 					<Item subMenuId="search-markOne" name="Di&amp;eses Vorkommen hervorheben"/>
@@ -163,6 +165,16 @@ Translation note:
 					<Item id="42074" name="Verzeichnis im Explorer öffnen"/>
 					<Item id="42075" name="Im Internet suchen"/>
 					<Item id="42076" name="Andere Suchmaschine wählen …"/>
+					<Item id="42090" name="Ignoriere Groß- und Kleinschreibung &amp;&amp; ganzes Wort"/>
+					<Item id="42091" name="Nur Übereinstimmung Groß- und Kleinschreibung"/>
+					<Item id="42092" name="Nur Übereinstimmung ganzes Wort"/>
+					<Item id="42093" name="Übereinstimmung Groß- und Kleinschreibung &amp;&amp; ganzes Wort"/>
+					<Item id="42094" name="Ignoriere Groß- und Kleinschreibung &amp;&amp; ganzes Wort"/>
+					<Item id="42095" name="Nur Übereinstimmung Groß- und Kleinschreibung"/>
+					<Item id="42096" name="Nur Übereinstimmung ganzes Wort"/>
+					<Item id="42097" name="Übereinstimmung Groß- und Kleinschreibung &amp;&amp; ganzes Wort"/>
+					<Item id="42098" name="Letzte Mehrfachauswahl rückgängig machen"/>
+					<Item id="42099" name="Aktuelle überspringen &amp;&amp; zur nächsten Mehrfachauswahl gehen"/>
 					<Item id="42018" name="Aufzei&amp;chnung starten"/>
 					<Item id="42019" name="Aufzeichnung s&amp;toppen"/>
 					<Item id="42021" name="Makro ausfüh&amp;ren"/>
@@ -260,10 +272,10 @@ Translation note:
 					<Item id="43063" name="Markierung &amp;2"/>
 					<Item id="43064" name="Markierung &amp;3"/>
 					<Item id="43065" name="Markierung &amp;4"/>
+					<Item id="43066" name="Markierung &amp;5"/>
 					<Item id="43067" name="Gehe zur nächsten Änderung"/>
 					<Item id="43068" name="Gehe zur vorherigen Änderung"/>
 					<Item id="43069" name="Änderungs-Historie löschen"/>
-					<Item id="43066" name="Markierung &amp;5"/>
 					<Item id="43045" name="Suchergebnis-&amp;Fenster"/>
 					<Item id="43046" name="Zum n&amp;ächsten Suchergebnis springen"/>
 					<Item id="43047" name="Zum vorherigen S&amp;uchergebnis springen"/>
@@ -301,6 +313,8 @@ Translation note:
 					<Item id="44092" name="&amp;7. Tab"/>
 					<Item id="44093" name="&amp;8. Tab"/>
 					<Item id="44094" name="&amp;9. Tab"/>
+					<Item id="44116" name="&amp;Erster Tab"/>
+					<Item id="44117" name="&amp;Letzter Tab"/>
 					<Item id="44095" name="&amp;Nächster Tab"/>
 					<Item id="44096" name="&amp;Vorheriger Tab"/>
 					<Item id="44097" name="Überwachen (tail -f)"/>
@@ -343,12 +357,12 @@ Translation note:
 					<Item id="45057" name="OEM 865 (Nordisch)"/>
 					<Item id="45053" name="OEM 860 (Portugiesisch)"/>
 					<Item id="45056" name="OEM 863 (kanadisches Französisch)"/>
-
 					<Item id="10001" name="In zweite Ansicht &amp;verschieben"/>
 					<Item id="10002" name="In zweite Ansicht &amp;duplizieren"/>
 					<Item id="10003" name="In &amp;neue Instanz verschieben"/>
 					<Item id="10004" name="In neue Instan&amp;z duplizieren"/>
-
+					<Item id="10005" name="Zum Anfang verschieben"/>
+					<Item id="10006" name="Ans Ende verschieben"/>
 					<Item id="46001" name="&amp;Stile konfigurieren …"/>
 					<Item id="46250" name="Eigene Sprache &amp;definieren …"/>
 					<Item id="46300" name="Verzeichnis mit benutzerdefinierten Sprachen öffnen …"/>
@@ -368,7 +382,7 @@ Translation note:
 					<Item id="48006" name="Stil-&amp;Themen importieren …"/>
 					<Item id="48018" name="Popup-&amp;Kontextmenü bearbeiten …"/>
 					<Item id="48009" name="&amp;Tastenkombinationen verwalten …"/>
-					<Item id="48011" name="&amp;Einstellungen …"/>
+					<Item id="48011" name="&amp;Optionen …"/>
 					<Item id="48014" name="Plugin-Verzeichnis öffnen …"/>
 					<Item id="48015" name="Plugin-Verwaltung …"/>
 					<Item id="48501" name="Erstellen …"/>
@@ -434,6 +448,8 @@ Translation note:
 				<Item CMDID="42030" name="Nur Datei&amp;namen kopieren"/>
 				<Item CMDID="42031" name="Nur Verzeichnis&amp;pfad kopieren"/>
 				<Item CMDID="3" name="Dokument verschieben"/>
+				<Item CMDID="10005" name="Zum Anfang verschieben"/>
+				<Item CMDID="10006" name="Ans Ende verschieben"/>
 				<Item CMDID="10001" name="In zweite Ansicht &amp;verschieben"/>
 				<Item CMDID="10002" name="In zw&amp;eite Ansicht duplizieren"/>
 				<Item CMDID="10003" name="In neue &amp;Instanz verschieben"/>
@@ -507,9 +523,9 @@ Translation note:
 			</Find>
 
 			<IncrementalFind title="">
-				<Item id="1681" name="Suchen"/>
-				<Item id="1685" name="Groß-/Kleinschreibung"/>
-				<Item id="1690" name="Alle markieren"/>
+				<Item id="1681" name="Suchen:"/>
+				<Item id="1685" name="&amp;Groß-/Kleinschreibung"/>
+				<Item id="1690" name="&amp;Alle markieren"/>
 			</IncrementalFind>
 
 			<FindCharsInRange title="Suche nach Zeichencodes">
@@ -650,17 +666,7 @@ Translation note:
 				<ScintillaCommandsTab name="Scintilla-Befehle"/>
 				<ConflictInfoOk name="Keine Konflikte mit dieser Tastenkombination."/>
 				<ConflictInfoEditing name="Keine Konflikte."/>
-				<WindowCategory name="Fenster"/>
-				<FileCategory name="Datei"/>
-				<EditCategory name="Bearbeiten"/>
-				<SearchCategory name="Suchen"/>
-				<ViewCategory name="Ansicht"/>
-				<FormatCategory name="Codierung"/>
-				<LangCategory name="Sprache"/>
 				<AboutCategory name="?"/>
-				<SettingCategory name="Einstellungen"/>
-				<ToolCategory name="Werkzeuge"/>
-				<ExecuteCategory name="Ausführen"/>
 				<ModifyContextMenu name="Ändern"/>
 				<DeleteContextMenu name="Löschen"/>
 				<ClearContextMenu name="Entfernen"/>
@@ -945,11 +951,11 @@ Translation note:
 				<Global title="Allgemein">
 					<Item id="6101" name="Symbolleiste"/>
 					<Item id="6102" name="Ausblenden"/>
-					<Item id="6103" name="Fluent UI: kleine Symbole"/>
-					<Item id="6104" name="Fluent UI: große Symbole"/>
+					<Item id="6103" name="Fluent UI: klein"/>
+					<Item id="6104" name="Fluent UI: groß"/>
 					<Item id="6129" name="Ausgefüllte Fluent UI: klein"/>
 					<Item id="6130" name="Ausgefüllte Fluent UI: groß"/>
-					<Item id="6105" name="Kleine Standard-Symbole"/>
+					<Item id="6105" name="Standard-Symbole: klein"/>
 
 					<Item id="6106" name="Dateireiter (Tabs)"/>
 					<Item id="6107" name="Verkleinern"/>
@@ -969,45 +975,54 @@ Translation note:
 
 					<Item id="6131" name="Menü"/>
 					<Item id="6122" name="Menüleiste ausblenden (Umschalten mit Alt oder F10)"/>
-					<Item id="6132" name="Schaltflächen '＋ ▼ ✕' der Menüleiste verbergen (Neustart von Notepad++ erforderlich)"/>
+					<Item id="6132" name="Schaltflächen '＋ ▼ ✕' in der Menüleiste ausblenden (Neustart von Notepad++ erforderlich)"/>
 
-					<Item id="6123" name="Sprache:"/>
+					<Item id="6123" name="Sprache"/>
 				</Global>
-				<Scintillas title="Bearbeiten">
+
+				<Scintillas title="Bearbeiten 1">
 					<Item id="6216" name="Cursoreinstellungen"/>
 					<Item id="6217" name="Breite:"/>
 					<Item id="6219" name="Geschwindigkeit:"/>
 					<Item id="6221" name="S"/>
 					<Item id="6222" name="L"/>
 					<Item id="6246" name="Befehl zum Ein- und Ausfalten der aktuellen Ebene umschaltbar machen"/>
-					<Item id="6225" name="Multi-Editing aktivieren (Strg+Mausklick/Auswahl)"/>
 					<Item id="6227" name="Zeilenumbruch"/>
 					<Item id="6228" name="Standard"/>
 					<Item id="6229" name="Ausgerichtet"/>
-					<Item id="6230" name="Einrücken"/>
-					<Item id="6234" name="Erweiterte Bildlauffunktion aufgrund eines Touchpad-Problems deaktivieren"/>
-					<Item id="6215" name="Kantenglättung der Schriftarten"/>
+					<Item id="6230" name="Eingerückt"/>
+					<Item id="6234" name="Erweiterte Bildlauffunktion aufgrund von Touchpad-Problemen deaktivieren"/>
+					<Item id="6215" name="Kantenglättung der Schriftarten aktivieren"/>
 					<Item id="6236" name="Scrollen über die letzte Zeile hinaus aktivieren"/>
-					<Item id="6239" name="Auswahl beibehalten bei Rechtsklick außerhalb der Auswahl"/>
+					<Item id="6239" name="Auswahl bei Rechtsklick außerhalb der Auswahl beibehalten"/>
 					<Item id="6245" name="Virtuellen Raum aktivieren"/>
+					<Item id="6214" name="Zeile Kopieren/Ausschneiden ohne Auswahl aktivieren"/>
 					<Item id="6651" name="Anzeige der aktuellen Zeile"/>
 					<Item id="6652" name="Keine"/>
 					<Item id="6653" name="Hintergrund hervorheben"/>
 					<Item id="6654" name="Rahmen"/>
 					<Item id="6655" name="Breite:"/>
+				</Scintillas>
+
+				<Scintillas2 title="Bearbeiten 2">
+					<Item id="6521" name="Mehrfach-Bearbeitung"/>
+					<Item id="6522" name="Mehrfach-Bearbeitung aktivieren (Strg+Maus-Klick/Auswahl)"/>
+					<Item id="6523" name="Spalten-Modus für Mehrfach-Bearbeitung aktivieren"/>
 					<Item id="6247" name="Zeilenende EOL (CRLF)"/><!-- Don't translate "(CRLF)" -->
 					<Item id="6248" name="Standard"/>
 					<Item id="6249" name="Klartext"/>
 					<Item id="6250" name="Benutzerdefinierte Farbe"/>
 					<Item id="6252" name="Nicht druckbare Zeichen"/>
+					<Item id="6260" name="Erscheinungsbild"/>
 					<Item id="6254" name="Abkürzung"/>
 					<Item id="6255" name="Codepoint"/>
 					<Item id="6256" name="Benutzerdefinierte Farbe"/>
-					<Item id="6258" name="Anwenden auf C0, C1 &amp;&amp; Unicode EOL"/>
-				</Scintillas>
+					<Item id="6258" name="Erscheinungsbild-Einstellungen auf C0, C1 &amp;&amp; Unicode EOL anwenden"/>
+					<Item id="6259" name="Schreiben von Steuerzeichen (C0-Codes) ins Dokument verhindern"/>
+				</Scintillas2>
 
 				<DarkMode title="Dunkler Modus">
-					<Item id="7131" name="Hellen Modus aktivieren"/>
+					<Item id="7131" name="Heller Modus"/>
 					<Item id="7132" name="Dunkler Modus"/>
 					<Item id="7133" name="Folge Windows"/>
 					<Item id="7102" name="Schwarz"/>
@@ -1035,25 +1050,25 @@ Translation note:
 				</DarkMode>
 
 				<MarginsBorderEdge title="Ränder/Rahmen/Umrandungen">
-					<Item id="6201" name="Ordnerrandstil"/>
+					<Item id="6201" name="Faltungsstil am Rand"/>
 					<Item id="6202" name="Einfach"/>
-					<Item id="6203" name="Pfeil"/>
-					<Item id="6204" name="Kreisstruktur"/>
-					<Item id="6205" name="Baumstruktur"/>
-					<Item id="6226" name="Keine"/>
-					<Item id="6291" name="Zeilennummer"/>
-					<Item id="6206" name="Anzeige"/>
+					<Item id="6203" name="Pfeile"/>
+					<Item id="6204" name="Kreise"/>
+					<Item id="6205" name="Kästchen"/>
+					<Item id="6226" name="Kein"/>
+					<Item id="6291" name="Zeilennummern"/>
+					<Item id="6206" name="Anzeigen"/>
 					<Item id="6292" name="Dynamische Breite"/>
 					<Item id="6293" name="Konstante Breite"/>
 					<Item id="6207" name="Lesezeichen anzeigen"/>
-					<Item id="6223" name="Zeige Änderungshistorie"/>
-					<Item id="6211" name="Vertikale Randeinstellungen"/>
+					<Item id="6295" name="Änderungshistorie"/>
+					<Item id="6223" name="Am Rand anzeigen"/>
+					<Item id="6296" name="Im Text anzeigen"/>
+					<Item id="6211" name="Einstellungen für vertikale Kanten"/>
 					<Item id="6213" name="Hintergrundmodus"/>
-					<Item id="6237" name="Es können Spaltenmarkierung hinzugefügt werden, indem ihre Position mit einer Dezimalzahl angeben wird.
-Mehrere Spaltenmarkierungen können definiert werden, indem die Zahlen durch Leerzeichen getrennt werden."/>
-					<Item id="6231" name="Rahmenbreite"/>
+					<Item id="6231" name="Breite der Umrandung"/>
 					<Item id="6235" name="Kein Rand"/>
-					<Item id="6208" name="Seitenrand"/>
+					<Item id="6208" name="Freiraum/Einrückung"/>
 					<Item id="6209" name="Links"/>
 					<Item id="6210" name="Rechts"/>
 					<Item id="6212" name="Ablenkungsfrei"/>
@@ -1070,7 +1085,7 @@ Mehrere Spaltenmarkierungen können definiert werden, indem die Zahlen durch Lee
 					<Item id="6408" name="UTF-8 mit BOM"/>
 					<Item id="6409" name="UTF-16 Big Endian mit BOM"/>
 					<Item id="6410" name="UTF-16 Little Endian mit BOM"/>
-					<Item id="6411" name="Standardsprache"/>
+					<Item id="6411" name="Standardsprache:"/>
 					<Item id="6419" name="Neues Dokument"/>
 					<Item id="6420" name="Auch beim Öffnen von ANSI-Dateien"/>
 					<Item id="6432" name="Öffne beim Starten immer zusätzlich ein neues Dokument"/>
@@ -1088,6 +1103,7 @@ Mehrere Spaltenmarkierungen können definiert werden, indem die Zahlen durch Lee
 					<Item id="4009" name="Unterstützte Erw.:"/>
 					<Item id="4010" name="Registrierte Erw.:"/>
 				</FileAssoc>
+
 				<Language title="Sprache">
 					<Item id="6505" name="Verfügbar:"/>
 					<Item id="6506" name="Deaktiviert:"/>
@@ -1161,10 +1177,11 @@ Mehrere Spaltenmarkierungen können definiert werden, indem die Zahlen durch Lee
 					<Item id="6903" name="Der Suchdialog bleibt nach der Suche geöffnet, die im Ergebnisfenster ausgegeben wird"/>
 					<Item id="6904" name="Bestätigung für 'Alle Ersetzen' in allen offenen Dokumenten"/>
 					<Item id="6905" name="Ersetzen: Nach Ersetzung nicht zum nächsten Vorkommen springen"/>
-					<Item id="6906" name="Suchergebnisfenster: Zeige nur einen Eintrag pro gefundener Zeile"/>
+					<Item id="6906" name="Suchergebnisfenster: Zeige wenn möglich nur einen Eintrag pro gefundener Zeile"/>
 					<Item id="6907" name="Wenn der Suchdialog aufgerufen wird"/>
 					<Item id="6908" name="Im Suchfeld gewählten Text einsetzen"/>
 					<Item id="6909" name="Das Wort unter dem Cursor verwenden wenn nichts gewählt ist"/>
+					<Item id="6910" name="Mindestgröße für die automatische Aktivierung von 'In Auswahl'"/>
 				</Searching>
 
 				<RecentFilesHistory title="Zuletzt geöffn. Dateien">
@@ -1185,6 +1202,7 @@ Mehrere Spaltenmarkierungen können definiert werden, indem die Zahlen durch Lee
 					<Item id="6821" name="Sekunden"/>
 					<Item id="6822" name="Verzeichnis:"/>
 					<Item id="6309" name="Aktuelle Sitzung für den nächsten Start merken"/>
+					<Item id="6825" name="Nicht zugängliche Dateien aus der letzten Sitzung merken"/>
 					<Item id="6801" name="Sicherheitskopie beim Speichern von Dateien"/>
 					<Item id="6315" name="Keine"/>
 					<Item id="6316" name="Einfach"/>
@@ -1253,12 +1271,13 @@ Mehrere Spaltenmarkierungen können definiert werden, indem die Zahlen durch Lee
 					<Item id="7141" name="Einschränkung für große Dateien"/>
 					<Item id="7143" name="Aktivieren der Einschränkung für große Dateien (keine Syntaxhervorhebung)"/>
 					<Item id="7144" name="Große Dateigröße definieren:"/>
-					<Item id="7146" name="MB   (1 - 4096)"/>
+					<Item id="7146" name="MB   (1 - 2046)"/>
 					<Item id="7147" name="Klammerübereinstimmung zulassen"/>
 					<Item id="7148" name="Auto-Vervollständigung zulassen"/>
 					<Item id="7149" name="Intelligente Hervorhebung zulassen"/>
 					<Item id="7150" name="Wortumbruch global deaktivieren"/>
 					<Item id="7151" name="URL anklickbaren Link zulassen"/>
+					<Item id="7152" name="Unterdrücke Warnung beim Öffnen von Dateien ≥2GB"/>
 				</Performance>
 
 				<Cloud title="Cloud &amp; Links">
@@ -1498,6 +1517,20 @@ Bitte die Kommandos daher testen und falls nötig editieren.
 Alternativ dazu kann auch auf die ältere Version Notepad++ v8.5.2 gewechselt und dort die aktuellen Daten gesichert werden.
 Notepad++ wird ein Backup der alten &quot;shortcuts.xml&quot; machen und die Datei als &quot;shortcuts.xml.v8.5.2.backup&quot; speichern.
 Beim darauf folgenden Umbenennen der &quot;shortcuts.xml.v8.5.2.backup&quot; -&gt; &quot;shortcuts.xml&quot; sollten die Kommandos wiederhergestellt sein und wieder funktionieren."/><!-- HowToReproduce: Close Notepad++, remove shortcuts.xml.v8.5.2.backup & v852ShortcutsCompatibilityWarning.xml if present, relaunch Notepad++, delete or modify a shortcuts via Shortcut Mapper, close Notepad++, then the message will show up -->
+			<NotEnoughRoom4Saving title="Speichern fehlgeschlagen" message="Konnte Datei nicht speichern.
+Es ist nicht genug Speicherplatz vorhanden, daher wurde die Datei nicht gespeichert."/>
+			<FileInaccessibleUserSession title="Datei nicht zugänglich" message="Einige Dateien der manuell gespeicherten Sitzung &quot;$STR_REPLACE$&quot; sind nicht zugänglich. Sie können aber als leere Datei und schreibgeschützt als Platzhalter geöffnet werden.
+
+Sollen diese Datei-Platzhalter erstellt werden?
+
+HINWEIS: Wenn die Platzhalter nicht erstellt oder später geschlossen werden, wird die manuell gespeicherte Sitzung beim Beenden NICHT MODIFIZIERT."/>
+			<FileInaccessibleDefaultSessionXml title="Datei nicht zugänglich" message="Einige Dateien der letzten Sitzung sind nicht zugänglich. Sie können aber als leere Datei und schreibgeschützt als Platzhalter geöffnet werden.
+
+Sollen diese Dateil-Platzhalter erstellt werden?
+
+HINWEIS: Wenn die Platzhalter nicht erstellt oder später geschlossen werden, wird die Sitzung beim Beenden MODIFIZIERT! Es wird empfohlen jetzt eine Sicherung der Sitzung &quot;session.xml&quot; zu machen."/>
+			<RTLvsDirectWrite title="Kann nicht auf 'Schreibrichtung von rechts nach links' (RTL) schalten" message="'RTL' ist nicht kompatibel mit dem 'DirectWrite' Modus. Bitte dazu 'DirectWrite' unter 'Diverses' in den Einstellungen deaktivieren und danach Notepad++ neu starten."/>
+			<FileMemoryAllocationFailed title="Ausnahmefehler: Dateispeicherzuweisung fehlgeschlagen" message="Eventuell gibt es nicht genügend zusammenhängenden freien Speicher für die von Notepad++ geladene Datei."/><!-- HowToReproduce: Try to open multiple files with total size > ~700MB in the x86 Notepad++ (it will depend on the PC memory configuration and the current system memory usage...). -->
 		</MessageBox>
 		<ClipboardHistory>
 			<PanelTitle name="Zwischenablage"/>
@@ -1621,7 +1654,6 @@ Beim darauf folgenden Umbenennen der &quot;shortcuts.xml.v8.5.2.backup&quot; -&g
 			<default-open-save-select-folder value="Wählen Sie ein Standardverzeichnis"/><!-- HowToReproduce: Settings > Preferences > Default Directory > [...] -->
 			<shift-change-direction-tip value="Shift+Enter verwenden um die Suchrichtung umzudrehen."/>
 			<two-find-buttons-tip value="Modus mit 2 Suchknöpfen"/>
-			<file-rename-title value="Umbenennen"/>
 			<find-in-files-filter-tip value="Suche in cpp, cxx, h, hxx &amp;&amp; hpp:
 *.cpp *.cxx *.h *.hxx *.hpp
 
@@ -1657,6 +1689,7 @@ Suche in allen Dateien, exkludiere alle Verzeichnisse log oder logs rekursiv:
 			<find-status-replace-not-found value="Ersetzen: Kein Vorkommen gefunden"/>
 			<find-status-replace-readonly value="Ersetzen: Konnte Text wegen schreibgeschützter Datei nicht ersetzen"/>
 			<find-status-cannot-find value="Suche: Konnte Text &quot;$STR_REPLACE$&quot; nicht finden"/>
+			<find-status-cannot-find-pebkac-maybe value="Das angegebene Vorkommen kann nicht gefunden werden. Bitte überprüfen ob 'Am Ende von vorne beginnen' (auf EIN), 'Groß-/Kleinschreibung beachten' (auf AUS), oder 'Nur ganze Wörter suchen' (auf AUS) gesetzt sind."/>
 			<find-status-scope-selection value="im gewählten Text"/>
 			<find-status-scope-all value="in der gesamten Datei"/>
 			<find-status-scope-backward value="vom Dateianfang bis zum Cursor"/>
@@ -1666,9 +1699,7 @@ Suche in allen Dateien, exkludiere alle Verzeichnisse log oder logs rekursiv:
 			<finder-collapse-all value="Alles einklappen"/>
 			<finder-uncollapse-all value="Alles aufklappen"/>
 			<finder-copy value="Kopiere ausgewählte Zeile(n)"/>
-			<finder-copy-verbatim value="Kopieren"/>
 			<finder-copy-paths value="Pfadnamen kopieren"/>
-			<finder-select-all value="Alles wählen"/>
 			<finder-clear-all value="Alles löschen"/>
 			<finder-open-all value="Alles öffnen"/>
 			<finder-purge-for-every-search value="Vor jeder Suche leeren"/>
@@ -1695,7 +1726,6 @@ Suche in allen Dateien, exkludiere alle Verzeichnisse log oder logs rekursiv:
 			<summary-nbsel2 value=" Bytes) in "/>
 			<summary-nbrange value=" Stufen"/>
 			<progress-hits-title value="Treffer:"/>
-			<progress-cancel-button value="Abbrechen"/>
 			<progress-cancel-info value="Aktion wird abgebrochen, bitte warten …"/>
 			<find-in-files-progress-title value="Fortschritt für die Suche in Dateien …"/>
 			<replace-in-files-confirm-title value="Sind Sie sicher?"/>
@@ -1710,6 +1740,11 @@ Suche in allen Dateien, exkludiere alle Verzeichnisse log oder logs rekursiv:
 			<find-result-title value="Suche"/><!-- Must not begin with space or tab character -->
 			<find-result-title-info value="($INT_REPLACE1$ Treffer in $INT_REPLACE2$ Dateien von $INT_REPLACE3$ gesucht)"/>
 			<find-result-title-info-selections value="($INT_REPLACE1$ Treffer in $INT_REPLACE2$ Auswahlen von $INT_REPLACE3$ gesucht)"/>
+			<find-result-title-info-options-searchmode-normal value="Normal"/>
+			<find-result-title-info-options-searchmode-extended value="Erweitert"/>
+			<find-result-title-info-options-searchmode-regexp value="RegEx"/>
+			<find-result-title-info-options-case value="Fall"/>
+			<find-result-title-info-options-word value="Wort"/>
 			<find-result-title-info-extra value=" - Zeilenfilter-Modus: nur die Treffer anzeigen"/>
 			<find-result-hits value="($INT_REPLACE$ Treffer)"/>
 			<find-result-line-prefix value="Zeile"/><!-- Must not begin with space or tab character -->
@@ -1757,7 +1792,9 @@ Ein Klick auf &quot;?&quot; öffnet die Webseite des Benutzerhandbuchs."/>
 
 			<!-- Don't translate "(&quot;Non-printing characters custom color&quot;)" -->
 			<npcCustomColor-tip value="Im Stil-Konfigurator kann die Standardfarbe für die speziellen Leerzeichen und die nicht druckbaren Zeichen angepasst werden (&quot;Non-printing characters custom color&quot;)."/>
-			<npcIncludeCcUniEol-tip value="Wenden Sie die Einstellungen für das Erscheinungsbild von nicht druckbaren Zeichen auf die Steuerzeichen C0, C1 und Unicode EOL (nächste Zeile, Zeilen- und Absatztrenner) an."/>
+			<npcIncludeCcUniEol-tip value="Einstellungen für das Erscheinungsbild von nicht druckbaren Zeichen auf die Steuerzeichen C0, C1 und Unicode EOL (nächste Zeile, Zeilen- und Absatztrenner) anwenden."/>
+			<searchingInSelThresh-tip value="Anzahl der ausgewählten Zeichen (max. 1024) in der Bearbeitungszone, um das Kontrollkästchen 'In Auswahl' automatisch zu aktivieren, wenn der Suchdialog aktiviert wird. Den Wert auf 0 setzen, um die automatische Markierung zu deaktivieren."/>
+			<verticalEdge-tip value="Eine Spaltenmarkierung kann hinzugefügt werden, indem ihre Position mit einer Dezimalzahl angeben wird. Mehrere Spaltenmarkierungen können definiert werden, indem die verschiedenen Zahlen durch Leerzeichen getrennt werden."/>
 		</MiscStrings>
 	</Native-Langue>
 </NotepadPlus>

@@ -255,7 +255,7 @@ void Notepad_plus::command(int id)
 				auto files = _pDocumentListPanel->getSelectedFiles(false);
 				for (auto&& sel : files)
 					buffers.push_back(MainFileManager.getBufferByID(sel._bufID));
-				buf2Clipborad(buffers, id == IDM_DOCLIST_COPYPATHS, _pDocumentListPanel->getHSelf());
+				buf2Clipboard(buffers, id == IDM_DOCLIST_COPYPATHS, _pDocumentListPanel->getHSelf());
 			}
 			break;
 
@@ -354,16 +354,55 @@ void Notepad_plus::command(int id)
 			checkUndoState();
 			break;
 		}
-
+		
 		case IDM_EDIT_CUT:
-			_pEditView->execute(WM_CUT);
-			checkClipboard();
+		{
+			HWND focusedHwnd = ::GetFocus();
+			if (focusedHwnd == _pEditView->getHSelf())
+			{
+				if (_pEditView->hasSelection()) // Cut normally
+				{
+					_pEditView->execute(WM_CUT);
+				}
+				else if (NppParameters::getInstance().getSVP()._lineCopyCutWithoutSelection) // Cut the entire line with EOL
+				{
+					_pEditView->execute(SCI_COPYALLOWLINE);
+					_pEditView->execute(SCI_LINEDELETE);
+				}
+			}
+			else
+			{
+				::SendMessage(focusedHwnd, WM_CUT, 0, 0);
+			}
 			break;
+		}
 
 		case IDM_EDIT_COPY:
-			_pEditView->execute(WM_COPY);
-			checkClipboard();
+		{
+			HWND focusedHwnd = ::GetFocus();
+			if (focusedHwnd == _pEditView->getHSelf())
+			{
+				if (_pEditView->hasSelection())
+				{
+					_pEditView->execute(WM_COPY);
+				}
+				else if (NppParameters::getInstance().getSVP()._lineCopyCutWithoutSelection)
+				{
+					_pEditView->execute(SCI_COPYALLOWLINE); // Copy without selected text, it will copy the whole line with EOL, for pasting before any line where the caret is.
+				}
+
+			}
+			else
+			{
+				Finder* finder = _findReplaceDlg.getFinderFrom(focusedHwnd);
+				if (finder)  // Search result
+					finder->scintillaExecute(WM_COPY);
+				else
+					::SendMessage(focusedHwnd, WM_COPY, 0, 0);
+			}
+
 			break;
+		}
 
 		case IDM_EDIT_COPY_LINK:
 		{
@@ -429,8 +468,8 @@ void Notepad_plus::command(int id)
 			GlobalUnlock(hglbLenCopy);
 
 			// Place the handle on the clipboard.
-			UINT f = RegisterClipboardFormat(CF_NPPTEXTLEN);
-			SetClipboardData(f, hglbLenCopy);
+			UINT cf_nppTextLen = RegisterClipboardFormat(CF_NPPTEXTLEN);
+			SetClipboardData(cf_nppTextLen, hglbLenCopy);
 
 			CloseClipboard();
 
@@ -442,9 +481,25 @@ void Notepad_plus::command(int id)
 		case IDM_EDIT_PASTE:
 		{
 			std::lock_guard<std::mutex> lock(command_mutex);
-			intptr_t eolMode = _pEditView->execute(SCI_GETEOLMODE);
-			_pEditView->execute(SCI_PASTE);
-			_pEditView->execute(SCI_CONVERTEOLS, eolMode);
+			HWND focusedHwnd = ::GetFocus();
+			if (focusedHwnd == _pEditView->getHSelf())
+			{
+				size_t nbSelections = _pEditView->execute(SCI_GETSELECTIONS);
+				Buffer* buf = getCurrentBuffer();
+				bool isRO = buf->isReadOnly();
+				if (nbSelections > 1 && !isRO)
+				{
+					bool isPasteDone = _pEditView->pasteToMultiSelection();
+					if (isPasteDone)
+						return;
+				}
+
+				_pEditView->execute(SCI_PASTE);
+			}
+			else
+			{
+				::SendMessage(focusedHwnd, WM_PASTE, 0, 0);
+			}
 		}
 		break;
 
@@ -1037,6 +1092,14 @@ void Notepad_plus::command(int id)
 		}
 		break;
 
+		case IDM_VIEW_TAB_START:
+		case IDM_VIEW_TAB_END:
+		{
+			size_t index = id == IDM_VIEW_TAB_START ? 0 : _pDocTab->nbItem() - 1;
+			switchToFile(_pDocTab->getBufferByIndex(index));
+		}
+		break;
+
 		case IDM_VIEW_TAB_NEXT:
 		{
 			const int current_index = _pDocTab->getCurrentTabIndex();
@@ -1226,7 +1289,7 @@ void Notepad_plus::command(int id)
 							buffers.push_back(buf);
 					}
 				}
-				buf2Clipborad({ buffers.begin(), buffers.end() }, id == IDM_EDIT_COPY_ALL_PATHS, _pPublicInterface->getHSelf());
+				buf2Clipboard({ buffers.begin(), buffers.end() }, id == IDM_EDIT_COPY_ALL_PATHS, _pPublicInterface->getHSelf());
 			}
 			break;
 
@@ -1237,6 +1300,12 @@ void Notepad_plus::command(int id)
 			const int strSize = FINDREPLACE_MAXLENGTH;
 			TCHAR str[strSize] = { '\0' };
 
+			const NppGUI& nppGui = (NppParameters::getInstance()).getNppGUI();
+			if (nppGui._fillFindFieldWithSelected)
+			{
+				_pEditView->getGenericSelectedText(str, strSize, nppGui._fillFindFieldSelectCaret);
+			}
+
 			bool isFirstTime = !_findReplaceDlg.isCreated();
 
 			DIALOG_TYPE dlgID = FIND_DLG;
@@ -1246,11 +1315,9 @@ void Notepad_plus::command(int id)
 				dlgID = MARK_DLG;
 			_findReplaceDlg.doDialog(dlgID, _nativeLangSpeaker.isRTL());
 
-			const NppGUI & nppGui = (NppParameters::getInstance()).getNppGUI();
 			if (nppGui._fillFindFieldWithSelected)
 			{
-				_pEditView->getGenericSelectedText(str, strSize, nppGui._fillFindFieldSelectCaret);
-				if (lstrlen(str) <= FINDREPLACE_INSEL_TEXTSIZE_THRESHOLD)
+				if (lstrlen(str) <= FINDREPLACE_INSELECTION_THRESHOLD_DEFAULT)
 				{
 					_findReplaceDlg.setSearchText(str);
 				}
@@ -1616,7 +1683,7 @@ void Notepad_plus::command(int id)
 		}
 		break;
 
-        case IDM_EDIT_COLUMNMODETIP :
+		case IDM_EDIT_COLUMNMODETIP :
 		{
 			_nativeLangSpeaker.messageBox("ColumnModeTip",
 					_pPublicInterface->getHSelf(),
@@ -1720,7 +1787,7 @@ void Notepad_plus::command(int id)
 					::SendMessage(_pPublicInterface->getHSelf(), WM_SIZE, 0, 0);
 
 					udd->display(false);
-					_mainWindowStatus &= ~WindowUserActive;
+					_mainWindowStatus &= static_cast<UCHAR>(~WindowUserActive);
 				}
 				else if ((isUDDlgDocked)&&(!isUDDlgVisible))
 				{
@@ -1770,10 +1837,10 @@ void Notepad_plus::command(int id)
 			bool forwards = id == IDM_EDIT_INS_TAB;
 			size_t selStartPos = _pEditView->execute(SCI_GETSELECTIONSTART);
 			size_t lineNumber = _pEditView->execute(SCI_LINEFROMPOSITION, selStartPos);
-			size_t numSelections = _pEditView->execute(SCI_GETSELECTIONS);
+			size_t nbSelections = _pEditView->execute(SCI_GETSELECTIONS);
 			size_t selEndPos = _pEditView->execute(SCI_GETSELECTIONEND);
 			size_t selEndLineNumber = _pEditView->execute(SCI_LINEFROMPOSITION, selEndPos);
-			if ((numSelections > 1) || (lineNumber != selEndLineNumber))
+			if ((nbSelections > 1) || (lineNumber != selEndLineNumber))
 			{
 				// multiple-selection or multi-line selection; use Scintilla SCI_TAB / SCI_BACKTAB behavior
 				_pEditView->execute(forwards ? SCI_TAB : SCI_BACKTAB);
@@ -1995,8 +2062,69 @@ void Notepad_plus::command(int id)
 		{
 			Buffer * buf = _pEditView->getCurrentBuffer();
 			removeReadOnlyFlagFromFileAttributes(buf->getFullPathName());
+			buf->setFileReadOnly(false);
 		}
 		break;
+
+		case IDM_EDIT_MULTISELECTALL:
+		case IDM_EDIT_MULTISELECTALLMATCHCASE:
+		case IDM_EDIT_MULTISELECTALLWHOLEWORD:
+		case IDM_EDIT_MULTISELECTALLMATCHCASEWHOLEWORD:
+		{
+			_multiSelectFlag = id == IDM_EDIT_MULTISELECTALL ? 0 :
+				(id == IDM_EDIT_MULTISELECTALLMATCHCASE ? SCFIND_MATCHCASE :
+					(id == IDM_EDIT_MULTISELECTALLWHOLEWORD ? SCFIND_WHOLEWORD: SCFIND_MATCHCASE| SCFIND_WHOLEWORD));
+
+			// Don't use _pEditView->hasSelection() because when multi-selection is active and main selection has no selection,
+			// it will cause an infinite loop on SCI_MULTIPLESELECTADDEACH. See:
+			// https://github.com/notepad-plus-plus/notepad-plus-plus/pull/14330#issuecomment-1797080251
+			bool hasSelection = (_pEditView->execute(SCI_GETSELECTIONSTART) != _pEditView->execute(SCI_GETSELECTIONEND));
+			if (!hasSelection)
+				_pEditView->expandWordSelection();
+
+			_pEditView->execute(SCI_TARGETWHOLEDOCUMENT);
+
+			// Firstly do a selection of the word on which the cursor is
+			_pEditView->execute(SCI_SETSEARCHFLAGS, _multiSelectFlag);
+			_pEditView->execute(SCI_MULTIPLESELECTADDEACH);
+		}
+		break;
+
+		case IDM_EDIT_MULTISELECTNEXT:
+		case IDM_EDIT_MULTISELECTNEXTMATCHCASE:
+		case IDM_EDIT_MULTISELECTNEXTWHOLEWORD:
+		case IDM_EDIT_MULTISELECTNEXTMATCHCASEWHOLEWORD:
+		{
+			_multiSelectFlag = id == IDM_EDIT_MULTISELECTNEXT ? 0 :
+				(id == IDM_EDIT_MULTISELECTNEXTMATCHCASE ? SCFIND_MATCHCASE :
+					(id == IDM_EDIT_MULTISELECTNEXTWHOLEWORD ? SCFIND_WHOLEWORD : SCFIND_MATCHCASE | SCFIND_WHOLEWORD));
+
+			_pEditView->execute(SCI_TARGETWHOLEDOCUMENT);
+			_pEditView->execute(SCI_SETSEARCHFLAGS, _multiSelectFlag);
+			_pEditView->execute(SCI_MULTIPLESELECTADDNEXT);
+		}
+		break;
+
+		case IDM_EDIT_MULTISELECTUNDO:
+		{
+			LRESULT n = _pEditView->execute(SCI_GETSELECTIONS);
+			if (n > 0)
+				_pEditView->execute(SCI_DROPSELECTIONN, n - 1);
+		}
+		break;
+
+		case IDM_EDIT_MULTISELECTSSKIP:
+		{
+			_pEditView->execute(SCI_TARGETWHOLEDOCUMENT);
+			_pEditView->execute(SCI_SETSEARCHFLAGS, _multiSelectFlag); // use the last used flag to select the next one
+			_pEditView->execute(SCI_MULTIPLESELECTADDNEXT);
+
+			LRESULT n = _pEditView->execute(SCI_GETSELECTIONS);
+			if (n > 1)
+				_pEditView->execute(SCI_DROPSELECTIONN, n - 2);
+		}
+		break;
+
 
 		case IDM_SEARCH_CUTMARKEDLINES :
 			cutMarkedLines();
@@ -2145,17 +2273,20 @@ void Notepad_plus::command(int id)
 
 		case IDM_VIEW_REDUCETABBAR:
 		{
-			_toReduceTabBar = !_toReduceTabBar;
-			auto& dpiManager = NppParameters::getInstance()._dpiManager;
+			bool isReduceed = TabBarPlus::isReduced();
 
 			//Resize the tab height
-			int tabDpiDynamicalWidth = dpiManager.scaleX(g_TabWidth);
-			int tabDpiDynamicalHeight = dpiManager.scaleY(_toReduceTabBar ? g_TabHeight : g_TabHeightLarge);
+			int tabDpiDynamicalWidth = _mainDocTab.dpiManager().scale(TabBarPlus::drawTabCloseButton() ? g_TabWidthCloseBtn : g_TabWidth);
+			int tabDpiDynamicalHeight = _mainDocTab.dpiManager().scale(isReduceed ? g_TabHeight : g_TabHeightLarge);
+			
+			TabCtrl_SetPadding(_mainDocTab.getHSelf(), _mainDocTab.dpiManager().scale(TabBarPlus::drawTabCloseButton() ? 10 : 6), 0);
+			TabCtrl_SetPadding(_subDocTab.getHSelf(), _subDocTab.dpiManager().scale(TabBarPlus::drawTabCloseButton() ? 10 : 6), 0);
+
 			TabCtrl_SetItemSize(_mainDocTab.getHSelf(), tabDpiDynamicalWidth, tabDpiDynamicalHeight);
 			TabCtrl_SetItemSize(_subDocTab.getHSelf(), tabDpiDynamicalWidth, tabDpiDynamicalHeight);
 
 			//change the font
-			const auto& hf = _mainDocTab.getFont(_toReduceTabBar);
+			const auto& hf = _mainDocTab.getFont(isReduceed);
 			if (hf)
 			{
 				::SendMessage(_mainDocTab.getHSelf(), WM_SETFONT, reinterpret_cast<WPARAM>(hf), MAKELPARAM(TRUE, 0));
@@ -2181,23 +2312,22 @@ void Notepad_plus::command(int id)
 
 		case IDM_VIEW_DRAWTABBAR_INACIVETAB:
 		{
-			TabBarPlus::setDrawInactiveTab(!TabBarPlus::drawInactiveTab());
+			TabBarPlus::setDrawInactiveTab(!TabBarPlus::drawInactiveTab(), &_mainDocTab);
 			break;
 		}
 		case IDM_VIEW_DRAWTABBAR_TOPBAR:
 		{
-			TabBarPlus::setDrawTopBar(!TabBarPlus::drawTopBar());
+			TabBarPlus::setDrawTopBar(!TabBarPlus::drawTopBar(), &_mainDocTab);
 			break;
 		}
 
 		case IDM_VIEW_DRAWTABBAR_CLOSEBOTTUN:
 		{
-			TabBarPlus::setDrawTabCloseButton(!TabBarPlus::drawTabCloseButton());
-			auto& dpiManager = NppParameters::getInstance()._dpiManager;
+			TabBarPlus::setDrawTabCloseButton(!TabBarPlus::drawTabCloseButton(), &_mainDocTab);
 
 			// This part is just for updating (redraw) the tabs
-			int tabDpiDynamicalHeight = dpiManager.scaleY(_toReduceTabBar ? g_TabHeight : g_TabHeightLarge);
-			int tabDpiDynamicalWidth = dpiManager.scaleX(TabBarPlus::drawTabCloseButton() ? g_TabWidthCloseBtn : g_TabWidth);
+			int tabDpiDynamicalHeight = _mainDocTab.dpiManager().scale(TabBarPlus::isReduced() ? g_TabHeight : g_TabHeightLarge);
+			int tabDpiDynamicalWidth = _mainDocTab.dpiManager().scale(TabBarPlus::drawTabCloseButton() ? g_TabWidthCloseBtn : g_TabWidth);
 			TabCtrl_SetItemSize(_mainDocTab.getHSelf(), tabDpiDynamicalWidth, tabDpiDynamicalHeight);
 			TabCtrl_SetItemSize(_subDocTab.getHSelf(), tabDpiDynamicalWidth, tabDpiDynamicalHeight);
 
@@ -3053,7 +3183,7 @@ void Notepad_plus::command(int id)
             break;
         }
 
-        case IDM_SETTING_IMPORTSTYLETHEMS :
+        case IDM_SETTING_IMPORTSTYLETHEMES :
         {
             // get plugin source path
             const TCHAR *extFilterName = TEXT("Notepad++ style theme");
@@ -3138,6 +3268,14 @@ void Notepad_plus::command(int id)
 			switchToFile(bufID);
             break;
         }
+
+        case IDM_VIEW_GOTO_START:
+			_pDocTab->currentTabToStart();
+			break;
+
+        case IDM_VIEW_GOTO_END:
+			_pDocTab->currentTabToEnd();
+			break;
 
         case IDM_VIEW_GOTO_ANOTHER_VIEW:
             docGotoAnotherEditView(TransferMove);
@@ -3627,6 +3765,8 @@ void Notepad_plus::command(int id)
 		case IDM_LANG_TYPESCRIPT:
 		case IDM_LANG_GDSCRIPT:
 		case IDM_LANG_HOLLYWOOD:
+		case IDM_LANG_GOLANG:
+		case IDM_LANG_RAKU:
 		case IDM_LANG_USER :
 		{
             setLanguage(menuID2LangType(id));
@@ -3674,25 +3814,9 @@ void Notepad_plus::command(int id)
 					if (TaskListDlg::_instanceCount == 0)
 					{
 						TaskListDlg tld;
-						HIMAGELIST hImgLst = nullptr;
 						const int tabIconSet = NppDarkMode::getTabIconSet(NppDarkMode::isEnabled());
-						switch (tabIconSet)
-						{
-							case 1:
-							{
-								hImgLst = _docTabIconListAlt.getHandle();
-								break;
-							}
-							case 2:
-							{
-								hImgLst = _docTabIconListDarkMode.getHandle();
-								break;
-							}
-							//case 0:
-							//case -1:
-							default:
-								hImgLst = _docTabIconList.getHandle();
-						}
+						HIMAGELIST hImgLst = _mainDocTab.getImgLst(tabIconSet);
+
 						tld.init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), hImgLst, direction);
 						tld.doDialog(_nativeLangSpeaker.isRTL());
 					}
@@ -3728,25 +3852,23 @@ void Notepad_plus::command(int id)
 		case IDM_EDIT_LTR :
 		{
 			bool toRTL = id == IDM_EDIT_RTL;
+
 			bool isRTL = _pEditView->isTextDirectionRTL();
 
 			if ((toRTL && isRTL) || (!toRTL && !isRTL))
 			{
 				if (! ((NppParameters::getInstance()).getNppGUI())._muteSounds)
 					::MessageBeep(MB_OK);
-				break;
+
+				return;
 			}
 
 			_pEditView->changeTextDirection(toRTL);
-			_pNonEditView->changeTextDirection(toRTL);
 
 			// Wrap then !wrap to fix problem of mirror characters
 			bool isWraped = _pEditView->isWrap();
 			_pEditView->wrap(!isWraped);
 			_pEditView->wrap(isWraped);
-
-			_pNonEditView->wrap(!isWraped);
-			_pNonEditView->wrap(isWraped);
 
 			if (_pDocMap)
 			{
@@ -3965,8 +4087,8 @@ void Notepad_plus::command(int id)
 
 			if (svp._currentLineHiliteMode != LINEHILITE_NONE)
 			{
-				_mainEditView.execute(SCI_SETELEMENTCOLOUR, SC_ELEMENT_CARET_LINE_BACK, bgColour);
-				_subEditView.execute(SCI_SETELEMENTCOLOUR, SC_ELEMENT_CARET_LINE_BACK, bgColour);
+				_mainEditView.setElementColour(SC_ELEMENT_CARET_LINE_BACK, bgColour);
+				_subEditView.setElementColour(SC_ELEMENT_CARET_LINE_BACK, bgColour);
 			}
 			else
 			{
@@ -4066,9 +4188,6 @@ void Notepad_plus::command(int id)
 			case IDM_FILE_RELOAD:
 			case IDM_EDIT_UNDO:
 			case IDM_EDIT_REDO:
-			case IDM_EDIT_CUT:
-			case IDM_EDIT_COPY:
-			//case IDM_EDIT_PASTE:
 			case IDM_EDIT_DELETE:
 			case IDM_SEARCH_FINDNEXT :
 			case IDM_SEARCH_FINDPREV :
@@ -4090,8 +4209,6 @@ void Notepad_plus::command(int id)
 			case IDM_EDIT_TRANSPOSE_LINE:
 			case IDM_EDIT_SPLIT_LINES:
 			case IDM_EDIT_JOIN_LINES:
-			case IDM_EDIT_LINE_UP:
-			case IDM_EDIT_LINE_DOWN:
 			case IDM_EDIT_REMOVEEMPTYLINES:
 			case IDM_EDIT_REMOVEEMPTYLINESWITHBLANK:
 			case IDM_EDIT_UPPERCASE:
@@ -4160,7 +4277,12 @@ void Notepad_plus::command(int id)
 			case IDM_VIEW_UNFOLD_6:
 			case IDM_VIEW_UNFOLD_7:
 			case IDM_VIEW_UNFOLD_8:
+			case IDM_VIEW_GOTO_START:
+			case IDM_VIEW_GOTO_END:
 			case IDM_VIEW_GOTO_ANOTHER_VIEW:
+			case IDM_VIEW_CLONE_TO_ANOTHER_VIEW:
+			case IDM_VIEW_GOTO_NEW_INSTANCE:
+			case IDM_VIEW_LOAD_IN_NEW_INSTANCE:
 			case IDM_VIEW_SYNSCROLLV:
 			case IDM_VIEW_SYNSCROLLH:
 			case IDM_VIEW_TAB1:
@@ -4229,7 +4351,23 @@ void Notepad_plus::command(int id)
 			case IDM_VIEW_IN_IE      :
 			case IDM_EDIT_COPY_ALL_NAMES:
 			case IDM_EDIT_COPY_ALL_PATHS:
+			case IDM_EDIT_MULTISELECTALLWHOLEWORD:
+			case IDM_EDIT_MULTISELECTALLMATCHCASEWHOLEWORD:
+			case IDM_EDIT_MULTISELECTNEXT:
+			case IDM_EDIT_MULTISELECTNEXTMATCHCASE:
+			case IDM_EDIT_MULTISELECTNEXTWHOLEWORD:
+			case IDM_EDIT_MULTISELECTNEXTMATCHCASEWHOLEWORD:
+			case IDM_EDIT_MULTISELECTUNDO:
+			case IDM_EDIT_MULTISELECTSSKIP:
 				_macro.push_back(recordedMacroStep(id));
+				break;
+
+			// No need to record the following commands: all they do is execute Scintilla commands, which are recorded instead.
+			case IDM_EDIT_CUT:
+			case IDM_EDIT_COPY:
+			case IDM_EDIT_PASTE:
+			case IDM_EDIT_LINE_UP:
+			case IDM_EDIT_LINE_DOWN:
 				break;
 
 			// The following 3 commands will insert date time string during the recording:

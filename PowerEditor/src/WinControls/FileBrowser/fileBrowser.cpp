@@ -443,7 +443,7 @@ generic_string FileBrowser::getNodePath(HTREEITEM node) const
 		HTREEITEM temp = _treeView.getParent(parent);
 		if (temp == nullptr)
 		{
-			SortingData4lParam* customData = reinterpret_cast<SortingData4lParam*>(_treeView.getItemParam(parent));
+			const SortingData4lParam* customData = reinterpret_cast<SortingData4lParam*>(_treeView.getItemParam(parent));
 			folderName = customData->_rootPath;
 		}
 		parent = temp;
@@ -750,7 +750,7 @@ void FileBrowser::popupMenuCmd(int cmdID)
 		{
 			if (!selectedNode) return;
 
-			generic_string *rootPath = (generic_string *)_treeView.getItemParam(selectedNode);
+			const wstring* rootPath = (wstring *)_treeView.getItemParam(selectedNode);
 			if (_treeView.getParent(selectedNode) != nullptr || rootPath == nullptr)
 				return;
 
@@ -884,75 +884,44 @@ void FileBrowser::getDirectoryStructure(const TCHAR *dir, const std::vector<gene
 	dirFilter += TEXT("*.*");
 	WIN32_FIND_DATA foundData;
 
-	HANDLE hFile = ::FindFirstFile(dirFilter.c_str(), &foundData);
-
-	if (hFile != INVALID_HANDLE_VALUE)
+	HANDLE hFindFile = ::FindFirstFile(dirFilter.c_str(), &foundData);
+	if (hFindFile != INVALID_HANDLE_VALUE)
 	{
-
-		if (foundData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+		do
 		{
-			if (!isInHiddenDir && (foundData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN))
+			if (foundData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			{
-				// do nothing
-			}
-			else if (isRecursive)
-			{
-				if ((OrdinalIgnoreCaseCompareStrings(foundData.cFileName, TEXT(".")) != 0) && (OrdinalIgnoreCaseCompareStrings(foundData.cFileName, TEXT("..")) != 0))
+				if (!isInHiddenDir && (foundData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN))
 				{
-					generic_string pathDir(dir);
-					if (pathDir[pathDir.length() - 1] != '\\')
+					// do nothing
+				}
+				else if (isRecursive)
+				{
+					if ((wcscmp(foundData.cFileName, TEXT(".")) != 0) && 
+						(wcscmp(foundData.cFileName, TEXT("..")) != 0))
+					{
+						generic_string pathDir(dir);
+						if (pathDir[pathDir.length() - 1] != '\\')
+							pathDir += TEXT("\\");
+						pathDir += foundData.cFileName;
 						pathDir += TEXT("\\");
-					pathDir += foundData.cFileName;
-					pathDir += TEXT("\\");
 
-					FolderInfo subDirectoryStructure(foundData.cFileName, &directoryStructure);
-					getDirectoryStructure(pathDir.c_str(), patterns, subDirectoryStructure, isRecursive, isInHiddenDir);
-					directoryStructure.addSubFolder(subDirectoryStructure);
+						FolderInfo subDirectoryStructure(foundData.cFileName, &directoryStructure);
+						getDirectoryStructure(pathDir.c_str(), patterns, subDirectoryStructure, isRecursive, isInHiddenDir);
+						directoryStructure.addSubFolder(subDirectoryStructure);
+					}
 				}
 			}
-		}
-		else
-		{
-			if (matchInList(foundData.cFileName, patterns))
+			else
 			{
-				directoryStructure.addFile(foundData.cFileName);
-			}
-		}
-	}
-
-	while (::FindNextFile(hFile, &foundData))
-	{
-		if (foundData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-		{
-			if (!isInHiddenDir && (foundData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN))
-			{
-				// do nothing
-			}
-			else if (isRecursive)
-			{
-				if ((OrdinalIgnoreCaseCompareStrings(foundData.cFileName, TEXT(".")) != 0) && (OrdinalIgnoreCaseCompareStrings(foundData.cFileName, TEXT("..")) != 0))
+				if (matchInList(foundData.cFileName, patterns))
 				{
-					generic_string pathDir(dir);
-					if (pathDir[pathDir.length() - 1] != '\\')
-						pathDir += TEXT("\\");
-					pathDir += foundData.cFileName;
-					pathDir += TEXT("\\");
-
-					FolderInfo subDirectoryStructure(foundData.cFileName, &directoryStructure);
-					getDirectoryStructure(pathDir.c_str(), patterns, subDirectoryStructure, isRecursive, isInHiddenDir);
-					directoryStructure.addSubFolder(subDirectoryStructure);
+					directoryStructure.addFile(foundData.cFileName);
 				}
 			}
-		}
-		else
-		{
-			if (matchInList(foundData.cFileName, patterns))
-			{
-				directoryStructure.addFile(foundData.cFileName);
-			}
-		}
+		} while (::FindNextFile(hFindFile, &foundData));
+		::FindClose(hFindFile);
 	}
-	::FindClose(hFile);
 }
 
 void FileBrowser::addRootFolder(generic_string rootFolderPath)

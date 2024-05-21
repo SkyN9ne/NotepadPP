@@ -45,6 +45,10 @@
 #include "md5Dlgs.h"
 #include <vector>
 #include <iso646.h>
+#include <chrono>
+
+extern std::chrono::steady_clock::time_point g_nppStartTimePoint;
+extern std::chrono::steady_clock::duration g_pluginsLoadingTime;
 
 
 #define MENU 0x01
@@ -220,7 +224,7 @@ public:
 	void macroPlayback(Macro);
 
     void loadLastSession();
-	bool loadSession(Session & session, bool isSnapshotMode = false, bool shouldLoadFileBrowser = false);
+	bool loadSession(Session & session, bool isSnapshotMode = false, const wchar_t* userCreatedSessionName = nullptr);
 
 	void prepareBufferChangedDialog(Buffer * buffer);
 	void notifyBufferChanged(Buffer * buffer, int mask);
@@ -295,12 +299,8 @@ private:
 	ContextMenu _fileSwitcherMultiFilePopupMenu;
 
 	ToolBar	_toolBar;
-	IconList _docTabIconList;
-	IconList _docTabIconListAlt;
-	IconList _docTabIconListDarkMode;
 
     StatusBar _statusBar;
-	bool _toReduceTabBar = false;
 	ReBar _rebarTop;
 	ReBar _rebarBottom;
 
@@ -418,6 +418,8 @@ private:
 	UCHAR _mainWindowStatus = 0; //For 2 views and user dialog if docked
 	int _activeView = MAIN_VIEW;
 
+	int _multiSelectFlag = 0; // For sktpping current Multi-select comment 
+
 	//User dialog docking
 	void dockUserDlg();
     void undockUserDlg();
@@ -495,6 +497,7 @@ private:
 
 	BOOL processIncrFindAccel(MSG *msg) const;
 	BOOL processFindAccel(MSG *msg) const;
+	BOOL processTabSwitchAccel(MSG* msg) const;
 
 	void checkMenuItem(int itemID, bool willBeChecked) const {
 		::CheckMenuItem(_mainMenuHandle, itemID, MF_BYCOMMAND | (willBeChecked?MF_CHECKED:MF_UNCHECKED));
@@ -611,6 +614,7 @@ private:
 	void launchAnsiCharPanel();
 	void launchClipboardHistoryPanel();
 	void launchDocumentListPanel(bool changeFromBtnCmd = false);
+	void changeDocumentListIconSet(bool changeFromBtnCmd);
 	void checkProjectMenuItem();
 	void launchProjectPanel(int cmdID, ProjectPanel ** pProjPanel, int panelID);
 	void launchDocMap();

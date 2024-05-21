@@ -46,7 +46,7 @@ void ShortcutMapper::initTabs()
 	::GetWindowPlacement(hTab, &wp);
 	::SendMessage(hTab, TCM_GETITEMRECT, 0, reinterpret_cast<LPARAM>(&rcTab));
 
-	wp.rcNormalPosition.bottom = NppParameters::getInstance()._dpiManager.scaleY(30);
+	wp.rcNormalPosition.bottom = _dpiManager.scale(30);
 	wp.rcNormalPosition.top = wp.rcNormalPosition.bottom - rcTab.bottom;
 
 	::SetWindowPlacement(hTab, &wp);
@@ -54,6 +54,7 @@ void ShortcutMapper::initTabs()
 
 void ShortcutMapper::getClientRect(RECT & rc) const 
 {
+	const UINT dpi = _dpiManager.getDpi();
 		Window::getClientRect(rc);
 
 		RECT tabRect{}, btnRect{};
@@ -69,11 +70,11 @@ void ShortcutMapper::getClientRect(RECT & rc) const
 		int infoH = infoRect.bottom - infoRect.top;
 		int filterH = filterRect.bottom - filterRect.top;
 		int btnH = btnRect.bottom - btnRect.top;
-		int paddingBottom = btnH + NppParameters::getInstance()._dpiManager.scaleY(16);
+	int paddingBottom = btnH + _dpiManager.scale(16, dpi);
 		rc.bottom -= btnH + filterH + infoH + paddingBottom;
 
-		rc.left += NppParameters::getInstance()._dpiManager.scaleX(5);
-		rc.right -= NppParameters::getInstance()._dpiManager.scaleX(5);
+	rc.left += _dpiManager.scale(5, dpi);
+	rc.right -= _dpiManager.scale(5, dpi);
 }
 
 generic_string ShortcutMapper::getTabString(size_t i) const
@@ -111,14 +112,12 @@ void ShortcutMapper::initBabyGrid()
 	_lastCursorRow.resize(5, 1);
 
 	_hGridFonts.resize(MAX_GRID_FONTS);
-	_hGridFonts.at(GFONT_HEADER) = ::CreateFont(
-		NppParameters::getInstance()._dpiManager.scaleY(18), 0, 0, 0, FW_BOLD,
-		FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH,
-		TEXT("MS Shell Dlg"));
-	_hGridFonts.at(GFONT_ROWS) = ::CreateFont(
-		NppParameters::getInstance()._dpiManager.scaleY(16), 0, 0, 0, FW_NORMAL,
-		FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH,
-		TEXT("MS Shell Dlg"));
+	LOGFONT lf{ _dpiManager.getDefaultGUIFontForDpi() };
+	lf.lfHeight = _dpiManager.scaleFont(10);
+	_hGridFonts.at(GFONT_ROWS) = ::CreateFontIndirect(&lf);
+	lf.lfHeight = _dpiManager.scaleFont(12);
+	lf.lfWeight = FW_BOLD;
+	_hGridFonts.at(GFONT_HEADER) = ::CreateFontIndirect(&lf);
 	
 	_babygrid.init(_hInst, _hSelf, IDD_BABYGRID_ID1);
 
@@ -132,9 +131,9 @@ void ShortcutMapper::initBabyGrid()
 	_babygrid.makeColAutoWidth(true);
 	_babygrid.setAutoRow(true);
 	_babygrid.setColsNumbered(false);
-	_babygrid.setColWidth(0, NppParameters::getInstance()._dpiManager.scaleX(30));  // Force the first col to be small, others col will be automatically sized
-	_babygrid.setHeaderHeight(NppParameters::getInstance()._dpiManager.scaleY(21));
-	_babygrid.setRowHeight(NppParameters::getInstance()._dpiManager.scaleY(21));
+	_babygrid.setColWidth(0, _dpiManager.scale(30));  // Force the first col to be small, others col will be automatically sized
+	_babygrid.setHeaderHeight(_dpiManager.scale(21));
+	_babygrid.setRowHeight(_dpiManager.scale(21));
 
 	if (NppDarkMode::isEnabled())
 	{
@@ -194,32 +193,76 @@ generic_string ShortcutMapper::getTextFromCombo(HWND hCombo)
 
 bool ShortcutMapper::isFilterValid(Shortcut sc)
 {
-	if (_shortcutFilter.empty())
+	// all words in _shortcutFilter must be in the name or keycombo
+	// For example, the shortcut with name "foo bar baz" and keycombo "Ctrl+A"
+	// would be matched by the filter "foo ctrl" and the filter "bar +a"
+	// but *not* by the filter "foo shift" or the filter "quz +a"
+	size_t filterSize = _shortcutFilter.size();
+	if (filterSize == 0)
 		return true;
 
 	wstring shortcut_name = stringToLower(string2wstring(sc.getName(), CP_UTF8));
 	wstring shortcut_value = stringToLower(string2wstring(sc.toString(), CP_UTF8));
 
-	// test the filter on the shortcut name and value
-	return (shortcut_name.find(_shortcutFilter) != std::string::npos) || 
-		(shortcut_value.find(_shortcutFilter) != std::string::npos);
+	for (size_t i = 0; i < filterSize; ++i)
+	{
+		generic_string filterWord = _shortcutFilter.at(i);
+		// every word must be matched by keycombo or name
+		if (shortcut_name.find(filterWord) == std::string::npos &&
+			shortcut_value.find(filterWord) == std::string::npos)
+			return false;
+	}
+	return true;
 }
 
 bool ShortcutMapper::isFilterValid(PluginCmdShortcut sc)
 {
-	// Do like a classic search on shortcut name, then search on the plugin name.
-	Shortcut shortcut = sc;
-	bool match = false;
-	wstring module_name = stringToLower(string2wstring(sc.getModuleName(), CP_UTF8));
-	if (isFilterValid(shortcut)){
+	// all words in _shortcutFilter must be in the name or the keycombo or the plugin name
+	// For example, the shortcut with name "foo bar baz" and keycombo "Ctrl+A" and plugin "BlahLint"
+	// would be matched by the filter "foo ctrl" and the filter "bar +a blah"
+	// but *not* by the filter "baz shift" or the filter "lint quz" 
+	size_t filterSize = _shortcutFilter.size();
+	if (filterSize == 0)
 		return true;
-	}
-	size_t match_pos = module_name.find(_shortcutFilter);
-	if (match_pos != std::string::npos){
-		match = true;
-	}
 
-	return match;
+	wstring shortcut_name = stringToLower(string2wstring(sc.getName(), CP_UTF8));
+	wstring shortcut_value = stringToLower(string2wstring(sc.toString(), CP_UTF8));
+	wstring module_name = stringToLower(string2wstring(sc.getModuleName(), CP_UTF8));
+	
+	for (size_t i = 0; i < filterSize; ++i)
+	{
+		generic_string filterWord = _shortcutFilter.at(i);
+		// every word must be matched by keycombo or name or plugin name
+		if (shortcut_name.find(filterWord) == std::string::npos &&
+			shortcut_value.find(filterWord) == std::string::npos &&
+			module_name.find(filterWord) == std::string::npos)
+			return false;
+	}
+	return true;
+}
+
+bool ShortcutMapper::isFilterValid(ScintillaKeyMap sc)
+{
+	// all words in _shortcutFilter must be in the name or the list of keycombos
+	// For example, the shortcut with name "foo bar baz" and keycombo "Ctrl+A or Alt+G"
+	// would be matched by the filter "foo ctrl" and the filter "bar alt or"
+	// but *not* by the filter "foo shift" or the filter "quz +a"
+	size_t filterSize = _shortcutFilter.size();
+	if (filterSize == 0)
+		return true;
+
+	wstring shortcut_name = stringToLower(string2wstring(sc.getName(), CP_UTF8));
+	wstring shortcut_value = stringToLower(string2wstring(sc.toString(), CP_UTF8));
+
+	for (size_t i = 0; i < filterSize; ++i)
+	{
+		generic_string filterWord = _shortcutFilter.at(i);
+		// every word must be matched by keycombo or name
+		if (shortcut_name.find(filterWord) == std::string::npos &&
+			shortcut_value.find(filterWord) == std::string::npos)
+			return false;
+	}
+	return true;
 }
 
 void ShortcutMapper::fillOutBabyGrid()
@@ -281,7 +324,20 @@ void ShortcutMapper::fillOutBabyGrid()
 
 	bool isMarker = false;
 	size_t cs_index = 0;
-	_shortcutFilter = getTextFromCombo(::GetDlgItem(_hSelf, IDC_BABYGRID_FILTER));
+	
+	// make _shortcutFilter a list of the words in IDC_BABYGRID_FILTER
+	generic_string shortcutFilterStr = getTextFromCombo(::GetDlgItem(_hSelf, IDC_BABYGRID_FILTER));
+	const generic_string whitespace(TEXT(" "));
+	std::vector<generic_string> shortcutFilterWithEmpties;
+	stringSplit(shortcutFilterStr, whitespace, shortcutFilterWithEmpties);
+	// now add only the non-empty strings in the split list to _shortcutFilter
+	_shortcutFilter = std::vector<generic_string>();
+	for (size_t i = 0; i < shortcutFilterWithEmpties.size(); ++i)
+	{
+		generic_string filterWord = shortcutFilterWithEmpties.at(i);
+		if (!filterWord.empty())
+			_shortcutFilter.push_back(filterWord);
+	}
 
 	switch(_currentState) 
 	{
@@ -300,9 +356,7 @@ void ShortcutMapper::fillOutBabyGrid()
 					if (cshortcuts[i].isEnabled()) //avoid empty strings for better performance
 						_babygrid.setText(cs_index, 2, string2wstring(cshortcuts[i].toString(), CP_UTF8).c_str());
 
-					const TCHAR* category = cshortcuts[i].getCategory();
-					generic_string categoryStr = nativeLangSpeaker->getShortcutMapperLangStr((std::string(wstring2string(category, CP_UTF8)) + "Category").c_str(), category);
-					_babygrid.setText(cs_index, 3, categoryStr.c_str());
+					_babygrid.setText(cs_index, 3, cshortcuts[i].getCategory());
 
 					if (isMarker)
 						isMarker = _babygrid.setMarker(false);
@@ -455,10 +509,11 @@ void ShortcutMapper::fillOutBabyGrid()
 
 intptr_t CALLBACK ShortcutMapper::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-	switch (message) 
+	switch (message)
 	{
-		case WM_INITDIALOG :
+		case WM_INITDIALOG:
 		{
+			setDpi();
 			initBabyGrid();
 			initTabs();
 			fillOutBabyGrid();
@@ -467,15 +522,14 @@ intptr_t CALLBACK ShortcutMapper::run_dlgProc(UINT message, WPARAM wParam, LPARA
 
 			NppDarkMode::autoSubclassAndThemeChildControls(_hSelf);
 
-			RECT rect;
+			RECT rect{};
 			Window::getClientRect(rect);
 			_clientWidth = rect.right - rect.left;
 			_clientHeight = rect.bottom - rect.top;
 
-			int cy_border = GetSystemMetrics(SM_CYFRAME);
-			int cy_caption = GetSystemMetrics(SM_CYCAPTION);
-			_initClientWidth = _clientWidth;
-			_initClientHeight = _clientHeight + cy_caption + cy_border;
+			Window::getWindowRect(rect);
+			_initClientWidth = rect.right - rect.left;
+			_initClientHeight = rect.bottom - rect.top;
 			_dialogInitDone = true;
 
 			return TRUE;
@@ -532,7 +586,7 @@ intptr_t CALLBACK ShortcutMapper::run_dlgProc(UINT message, WPARAM wParam, LPARA
 		{
 			LONG newWidth = LOWORD(lParam);
 			LONG newHeight = HIWORD(lParam);
-			RECT rect;
+			RECT rect{};
 
 			LONG addWidth = newWidth - _clientWidth;
 			LONG addHeight = newHeight - _clientHeight;
@@ -1387,7 +1441,7 @@ bool ShortcutMapper::findKeyConflicts(__inout_opt generic_string * const keyConf
 							*keyConflictLocation += TEXT("  |  ");
 							*keyConflictLocation += std::to_wstring(itemIndex + 1);
 							*keyConflictLocation += TEXT("   ");
-							*keyConflictLocation += string2wstring(vShortcuts[itemIndex].getName(), CP_UTF8);;
+							*keyConflictLocation += string2wstring(vShortcuts[itemIndex].getName(), CP_UTF8);
 							*keyConflictLocation += TEXT("  ( ");
 							*keyConflictLocation += string2wstring(vShortcuts[itemIndex].toString(), CP_UTF8);
 							*keyConflictLocation += TEXT(" )");

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <NotepadPlus>
-	<Native-Langue name="台灣繁體" filename="taiwaneseMandarin.xml" version="8.5.5">
+	<Native-Langue name="台灣繁體" filename="taiwaneseMandarin.xml" version="8.6.3">
 		<Menu>
 			<Main>
 				<!-- Main Menu Entries -->
@@ -281,6 +281,8 @@
 					<Item id="44092" name="頁籤7"/>
 					<Item id="44093" name="頁籤8"/>
 					<Item id="44094" name="頁籤9"/>
+					<Item id="44116" name="車頭頁籤"/>
+					<Item id="44117" name="車尾頁籤"/>
 					<Item id="44095" name="下一頁籤"/>
 					<Item id="44096" name="上一頁籤"/>
 					<Item id="44110" name="移除顏色"/>
@@ -321,12 +323,12 @@
 					<Item id="45057" name="OEM 865: 北歐文"/>
 					<Item id="45053" name="OEM 860: 葡萄牙文"/>
 					<Item id="45056" name="OEM 863: 法文"/>
-
 					<Item id="10001" name="移動到另一檢視"/>
 					<Item id="10002" name="仿製到另一檢視"/>
 					<Item id="10003" name="移到新執行個體"/>
 					<Item id="10004" name="在新執行個體開啟"/>
-
+					<Item id="10005" name="移動至車頭"/>
+					<Item id="10006" name="移動至車尾"/>
 					<Item id="46001" name="語法樣式配置器..."/>
 					<Item id="46250" name="定義你的語法樣式..."/>
 					<Item id="46300" name="開啟自訂語法樣式資料夾..."/>
@@ -614,7 +616,7 @@
 				<ScintillaCommandsTab name="Scintilla 指令"/>
 				<ConflictInfoOk name="沒有與此項目衝突的快捷鍵。"/>
 				<ConflictInfoEditing name="沒有與此項目衝突的快捷鍵..."/>
-
+				<AboutCategory name="關於"/>
 				<MainCommandNames>
 					<Item id="41019" name="在檔案總管內開啟檔案位置"/>
 					<Item id="41020" name="在 CMD 內開啟檔案位置"/>
@@ -926,14 +928,13 @@
 					<Item id="6127" name="停用副檔名欄"/>
 				</Global>
 
-				<Scintillas title="編輯">
+				<Scintillas title="編輯一">
 					<Item id="6216" name="游標設定"/>
 					<Item id="6217" name="寬度："/>
 					<Item id="6219" name="閃爍頻率："/>
 					<Item id="6221" name="快"/>
 					<Item id="6222" name="慢"/>
 					<Item id="6246" name="使折疊/展開當前層級命令可切換"/>
-					<Item id="6225" name="啟用多個位置同時編輯（Ctrl + 滑鼠點擊/選取）"/>
 					<Item id="6227" name="換行設定"/>
 					<Item id="6228" name="預設"/>
 					<Item id="6229" name="對齊"/>
@@ -943,16 +944,30 @@
 					<Item id="6236" name="允許捲動至超出最後一行"/>
 					<Item id="6239" name="在選擇範圍之外點擊滑鼠右鍵時仍保留選擇範圍"/>
 					<Item id="6245" name="啟用虛擬空間"/>
+					<Item id="6214" name="允許無文字選取時複製/剪下當前整行文字"/>
 					<Item id="6651" name="游標行設定"/>
 					<Item id="6652" name="無"/>
 					<Item id="6653" name="加上背景顏色"/>
 					<Item id="6654" name="加上邊緣線"/>
 					<Item id="6655" name="粗細度："/>
+				</Scintillas>
+
+				<Scintillas2 title="編輯二">
+					<Item id="6521" name="多位同時編輯"/>
+					<Item id="6522" name="啟用多個位置同時編輯（Ctrl + 滑鼠點擊/選取）"/>
+					<Item id="6523" name="啟用行列模式自動轉換到多位同時編輯"/>
 					<Item id="6247" name="換行字符（CRLF）"/>
 					<Item id="6248" name="內定"/>
 					<Item id="6249" name="純文字"/>
 					<Item id="6250" name="使用自訂顏色"/>
-				</Scintillas>
+					<Item id="6252" name="非列印字符"/>
+					<Item id="6260" name="外觀"/>
+					<Item id="6254" name="縮寫"/>
+					<Item id="6255" name="代碼"/>
+					<Item id="6256" name="使用自訂顏色"/>
+					<Item id="6258" name="套用設定的外觀於 C0, C1 &amp;&amp; 萬國碼換行字符"/>
+					<Item id="6259" name="禁止控制字元（C0 代碼）輸入文件"/>
+				</Scintillas2>
 
 				<DarkMode title="黑暗模式">
 					<Item id="7131" name="鮮明模式"/>
@@ -987,17 +1002,17 @@
 					<Item id="6203" name="箭頭"/>
 					<Item id="6204" name="圓形"/>
 					<Item id="6205" name="方形"/>
-					<Item id="6226" name="無"/>
+					<Item id="6226" name="無"/> 
 					<Item id="6291" name="行號"/>
 					<Item id="6206" name="顯示"/>
 					<Item id="6292" name="動態寬度"/>
 					<Item id="6293" name="恆定寬度"/>
 					<Item id="6207" name="顯示標記"/>
-					<Item id="6223" name="顯示文件修改紀錄"/>
+					<Item id="6295" name="文件修改紀錄"/>
+					<Item id="6223" name="顯示在邊框上"/>
+					<Item id="6296" name="顯示在字裡行間"/>
 					<Item id="6211" name="行界線設定"/>
 					<Item id="6213" name="背景色模式"/>
-					<Item id="6237" name="如欲添加列標記可以在下面以數字指示其列位置。
-使用空格分隔不同數字來定義多個列標記。"/>
 					<Item id="6231" name="邊框寬度"/>
 					<Item id="6235" name="無邊框"/>
 					<Item id="6208" name="填充"/>
@@ -1107,10 +1122,11 @@
 					<Item id="6903" name="搜尋結果輸出到結果視窗後，尋找與取代對話方塊繼續保持打開狀態"/>
 					<Item id="6904" name="確認「在所有開啟的文件中取代」"/>
 					<Item id="6905" name="替換：不要移動到下一個匹配項"/>
-					<Item id="6906" name="搜尋結果視窗：每個找到的行只顯示一個條目"/>
+					<Item id="6906" name="搜尋結果視窗：在可能的情況下每個找到的行只顯示一個條目"/>
 					<Item id="6907" name="當尋找對話方塊被觸發引出時"/>
 					<Item id="6908" name="用選取詞填充尋找與取代對話方塊中的尋找內容"/>
 					<Item id="6909" name="在沒有任何選取時，選取游標下的字串"/>
+					<Item id="6910" name="啟動自動勾選核取方塊「僅尋找選取範圍」的最小值："/>
 				</Searching>
 
 				<RecentFilesHistory title="最近使用的檔案">
@@ -1131,6 +1147,7 @@
 					<Item id="6821" name="秒備份一次"/>
 					<Item id="6822" name="備份資料夾："/>
 					<Item id="6309" name="開啟程式時繼續上次的工作階段"/>
+					<Item id="6825" name="保存上次的工作階段中無法讀取的文件"/>
 					<Item id="6801" name="備份"/>
 					<Item id="6315" name="無"/>
 					<Item id="6316" name="簡易備份"/>
@@ -1187,7 +1204,7 @@
 					<Item id="7141" name="大型檔案限制"/>
 					<Item id="7143" name="啟動大型檔案限制（沒有語法醒目提示）"/>
 					<Item id="7144" name="定義大型檔案文件長度大小："/>
-					<Item id="7146" name="MB   (1 - 4096)"/>
+					<Item id="7146" name="MB   (1 - 2046)"/>
 					<Item id="7147" name="允許顏色顯示對應括號"/>
 					<Item id="7148" name="允許自動完成功能"/>
 					<Item id="7149" name="允許智慧醒目提示"/>
@@ -1232,7 +1249,7 @@
 					<Item id="6324" name="文件切換器（Ctrl + TAB）"/>
 					<Item id="6331" name="在標題列僅顯示檔案名稱（隱藏資料夾路徑）"/>
 					<Item id="6334" name="自動偵測檔案編碼"/>
-					<Item id="6349" name="使用 DirectWrite（可改善特殊字符的呈現，需要重新啟動 Notepad++）"/>
+					<Item id="6349" name="使用「直接寫入」模式（可改善特殊字符的呈現，需要重新啟動 Notepad++）"/>
 					<Item id="6337" name="資料夾工作區檔案副檔名："/>
 					<Item id="6114" name="啟動"/>
 					<Item id="6117" name="開啟「最近使用的檔案」功能"/>
@@ -1378,6 +1395,19 @@
 繼續嗎？"/>
 			<NeedToRestartToLoadPlugins title="重新啟動 Notepad++" message="你必須重新啟動 Notepad++ 才能載入已安裝的外掛模組。"/>
 			<ChangeHistoryEnabledWarning title="重新啟動 Notepad++" message="你必須重新啟動 Notepad++ 才能啟動文件修改紀錄。"/>
+			<FileInaccessibleUserSession title="檔案不存在" message="儲存的工作階段 &quot;$STR_REPLACE$&quot; 中有一些已不存在的檔案。它們可以以空白唯讀文件的形式作為佔位欄而創建。
+
+你想為它們創建佔位欄嗎？
+
+請注意，如果你選擇不創建佔位欄或稍後關閉它們，工作階段檔案將不會在 Notepad++ 關閉時被修改。
+"/>
+			<FileInaccessibleDefaultSessionXml title="檔案不存在" message="過去的工作階段中有一些已不存在的檔案。它們可以以空白唯讀文件的形式作為佔位欄而創建。
+
+你想為它們創建佔位欄嗎？
+
+請注意，如果你選擇不創建佔位欄或稍後關閉它們，工作階段檔案將在 Notepad++ 關閉時被修改。我們建議你現在備份工作階段檔案 &quot;session.xml&quot; 。"/>
+			<RTLvsDirectWrite title="無法執行「文字由右至左」指令" message="「文字由右至左」指令與「直接寫入」模式不相容。 請在偏好設定對話框的「其他」中停用「直接寫入」模式，然後重新​​啟動 Notepad++ 。"/>
+			<FileMemoryAllocationFailed title="例外狀況：檔案記憶體分配失敗" message="可能沒有足夠的連續可用記憶體供 Notepad++ 載入檔案。"/>
 		</MessageBox>
 		<ClipboardHistory>
 			<PanelTitle name="剪貼簿記錄"/>
@@ -1518,9 +1548,10 @@
 			<find-status-replace-top-reached value="取代：從下面取代了 1 個相符的字串。搜尋已抵達文件開首。"/>
 			<find-status-replaced-next-found value="取代：取代了 1 個字串。找到下一個字串。"/>
 			<find-status-replaced-next-not-found value="取代：取代了 1 個字串。找不到下一個字串。"/>
-			<find-status-replace-not-found value="取代：找不到搜尋字串。"/>
+			<find-status-replace-not-found value="取代：找不到搜尋字串"/>
 			<find-status-replace-readonly value="取代：檔案唯讀，無法取代字串。"/>
-			<find-status-cannot-find value="搜尋：找不到搜尋字串「$STR_REPLACE$」。"/>
+			<find-status-cannot-find value="搜尋：找不到搜尋字串「$STR_REPLACE$」"/>
+			<find-status-cannot-find-pebkac-maybe value="找不到指定的字串。你可能忘記設定「循環」（設為開啟）、「區分大小寫」（設為關閉）或「僅符合整個單字」（設為關閉）"/>
 			<find-status-scope-selection value="在所選取的字串中"/>
 			<find-status-scope-all value="在整個檔案中"/>
 			<find-status-scope-backward value="從文件開始到游標位置"/>
@@ -1530,8 +1561,6 @@
 			<finder-collapse-all value="層數全部收折"/>
 			<finder-uncollapse-all value="層數全部展開"/>
 			<finder-copy value="複製全行"/>
-			<finder-copy-verbatim value="複製"/>
-			<finder-select-all value="全部選取"/>
 			<finder-clear-all value="全部清除"/>
 			<finder-open-all value="全部開啟"/>
 			<finder-wrap-long-lines value="自動換行"/>
@@ -1593,6 +1622,8 @@
 1. 修改這些選項需要重新開啟已開啟的大型文件以達到預期的效果。
 
 2. 如果「停用自動換行」被啟動，在開啟一個大型文件時，「自動換行」將對所有文件停用。 你可以通過選單「檢視-&gt;自動換行」重新啟動這個功能。"/>
+			<searchingInSelThresh-tip value="在尋找與取代對話方塊啟動時，為啟動自動勾選核取方塊「僅尋找選取範圍」在編輯區中選取的字符數量。 最大值為 1024。 將值設置為 0 將停止自動勾選功能。"/>
+			<verticalEdge-tip value="如欲添加列標記可以在下面以數字指示其列位置。使用空格分隔不同數字來定義多個列標記。"/>
 		</MiscStrings>
 	</Native-Langue>
 </NotepadPlus>

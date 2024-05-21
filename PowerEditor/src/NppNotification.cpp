@@ -151,8 +151,8 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 					BufferID id = pTabDocView->getBufferByIndex(tbHdr->_tabOrigin);
 					Buffer *pBuf = MainFileManager.getBufferByID(id);
 
-					Buffer *currentBufMain = _mainEditView.getCurrentBuffer();
-					Buffer *currentBufSub = _subEditView.getCurrentBuffer();
+					const Buffer* currentBufMain = _mainEditView.getCurrentBuffer();
+					const Buffer* currentBufSub = _subEditView.getCurrentBuffer();
 
 					RECT rect{};
 					TabCtrl_GetItemRect(pTabDocView->getHSelf(), tbHdr->_tabOrigin, &rect);
@@ -179,10 +179,10 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 				if (pTabDocView)
 				{
 					BufferID id = pTabDocView->getBufferByIndex(tbHdr->_tabOrigin);
-					Buffer *pBuf = MainFileManager.getBufferByID(id);
+					Buffer* pBuf = MainFileManager.getBufferByID(id);
 
-					Buffer *currentBufMain = _mainEditView.getCurrentBuffer();
-					Buffer *currentBufSub = _subEditView.getCurrentBuffer();
+					const Buffer* currentBufMain = _mainEditView.getCurrentBuffer();
+					const Buffer* currentBufSub = _subEditView.getCurrentBuffer();
 
 					if (pBuf != currentBufMain && pBuf != currentBufSub) // if hover on other tab
 					{
@@ -478,10 +478,10 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 				}
 				else if (lpnm->dwItemSpec == DWORD(STATUSBAR_UNICODE_TYPE))
 				{
-					POINT p;
-					::GetCursorPos(&p);
+					POINT cursorPos;
+					::GetCursorPos(&cursorPos);
 					HMENU hLangMenu = ::GetSubMenu(_mainMenuHandle, MENUINDEX_FORMAT);
-					TrackPopupMenu(hLangMenu, 0, p.x, p.y, 0, _pPublicInterface->getHSelf(), NULL);
+					TrackPopupMenu(hLangMenu, 0, cursorPos.x, cursorPos.y, 0, _pPublicInterface->getHSelf(), NULL);
 				}
 				return TRUE;
 			}
@@ -552,6 +552,9 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 					itemUnitArray.push_back(MenuItemUnit(IDM_EDIT_FULLPATHTOCLIP, TEXT("Copy Full File Path"), TEXT("Copy to Clipboard")));
 					itemUnitArray.push_back(MenuItemUnit(IDM_EDIT_FILENAMETOCLIP, TEXT("Copy Filename"), TEXT("Copy to Clipboard")));
 					itemUnitArray.push_back(MenuItemUnit(IDM_EDIT_CURRENTDIRTOCLIP, TEXT("Copy Current Dir. Path"), TEXT("Copy to Clipboard")));
+					itemUnitArray.push_back(MenuItemUnit(IDM_VIEW_GOTO_START, TEXT("Move to Start"), TEXT("Move Document")));
+					itemUnitArray.push_back(MenuItemUnit(IDM_VIEW_GOTO_END, TEXT("Move to End"), TEXT("Move Document")));
+					itemUnitArray.push_back(MenuItemUnit(0, NULL, TEXT("Move Document")));
 					itemUnitArray.push_back(MenuItemUnit(IDM_VIEW_GOTO_ANOTHER_VIEW, TEXT("Move to Other View"), TEXT("Move Document")));
 					itemUnitArray.push_back(MenuItemUnit(IDM_VIEW_CLONE_TO_ANOTHER_VIEW, TEXT("Clone to Other View"), TEXT("Move Document")));
 					itemUnitArray.push_back(MenuItemUnit(IDM_VIEW_GOTO_NEW_INSTANCE, TEXT("Move to New Instance"), TEXT("Move Document")));
@@ -585,21 +588,30 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 			_tabPopupMenu.checkItem(IDM_EDIT_SETREADONLY, isUserReadOnly);
 
 			bool isSysReadOnly = buf->getFileReadOnly();
+			bool isInaccessible = buf->isInaccessible();
 			_tabPopupMenu.enableItem(IDM_EDIT_SETREADONLY, !isSysReadOnly && !buf->isMonitoringOn());
 			_tabPopupMenu.enableItem(IDM_EDIT_CLEARREADONLY, isSysReadOnly);
+			if (isInaccessible)
+				_tabPopupMenu.enableItem(IDM_EDIT_CLEARREADONLY, false);
 
 			bool isFileExisting = PathFileExists(buf->getFullPathName()) != FALSE;
 			_tabPopupMenu.enableItem(IDM_FILE_DELETE, isFileExisting);
 			_tabPopupMenu.enableItem(IDM_FILE_RELOAD, isFileExisting);
 			_tabPopupMenu.enableItem(IDM_FILE_OPEN_FOLDER, isFileExisting);
 			_tabPopupMenu.enableItem(IDM_FILE_OPEN_CMD, isFileExisting);
+			_tabPopupMenu.enableItem(IDM_FILE_CONTAININGFOLDERASWORKSPACE, isFileExisting);
 
 			_tabPopupMenu.enableItem(IDM_FILE_OPEN_DEFAULT_VIEWER, isAssoCommandExisting(buf->getFullPathName()));
 
 			bool isDirty = buf->isDirty();
 			bool isUntitled = buf->isUntitled();
-			_tabPopupMenu.enableItem(IDM_VIEW_GOTO_NEW_INSTANCE, !(isDirty||isUntitled));
-			_tabPopupMenu.enableItem(IDM_VIEW_LOAD_IN_NEW_INSTANCE, !(isDirty||isUntitled));
+			_tabPopupMenu.enableItem(IDM_VIEW_GOTO_ANOTHER_VIEW, !isInaccessible);
+			_tabPopupMenu.enableItem(IDM_VIEW_CLONE_TO_ANOTHER_VIEW, !isInaccessible);
+			_tabPopupMenu.enableItem(IDM_VIEW_GOTO_NEW_INSTANCE, !isInaccessible && !isDirty && !isUntitled);
+			_tabPopupMenu.enableItem(IDM_VIEW_LOAD_IN_NEW_INSTANCE, !isInaccessible && !isDirty && !isUntitled);
+
+			_tabPopupMenu.enableItem(IDM_FILE_SAVEAS, !isInaccessible);
+			_tabPopupMenu.enableItem(IDM_FILE_RENAME, !isInaccessible);
 
 			_tabPopupMenu.display(p);
 			return TRUE;
@@ -680,7 +692,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 			if (!_recordingMacro && !_playingBackMacro) // No macro recording or playing back
 			{
 				const NppGUI & nppGui = NppParameters::getInstance().getNppGUI();
-				bool indentMaintain = nppGui._maitainIndent;
+				bool indentMaintain = nppGui._maintainIndent;
 				if (indentMaintain)
 					maintainIndentation(static_cast<TCHAR>(notification->ch));
 
@@ -1060,7 +1072,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 			if (_syncInfo.doSync())
 				doSynScorll(HWND(notification->nmhdr.hwndFrom));
 
-			NppParameters& nppParam = NppParameters::getInstance();
+			const NppParameters& nppParam = NppParameters::getInstance();
 
 			// if it's searching/replacing, then do nothing
 			if ((_linkTriggered && !nppParam._isFindReplacing) || notification->wParam == LINKTRIGGERED)

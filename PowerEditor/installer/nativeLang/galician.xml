@@ -5,7 +5,7 @@ Translation note:
 2. All the comments are for explanation, they are not for translation.
 -->
 <NotepadPlus>
-	<Native-Langue name="Galego" filename="galician.xml" version="8.5.5">
+	<Native-Langue name="Galego" filename="galician.xml" version="8.6.5">
 		<Menu>
 			<Main>
 				<!-- Main Menu Entries -->
@@ -39,6 +39,8 @@ Translation note:
 					<Item subMenuId="edit-blankOperations" name="Operacións de limpe&amp;za"/>
 					<Item subMenuId="edit-pasteSpecial" name="Pe&amp;gado especial"/>
 					<Item subMenuId="edit-onSelection" name="Selecció&amp;n"/>
+					<Item subMenuId="edit-multiSelectALL" name="Multiselección total"/>
+					<Item subMenuId="edit-multiSelectNext" name="Seguinte multiselección"/>
 					<Item subMenuId="search-changeHistory" name="Historial de cambios"/>
 					<Item subMenuId="search-markAll" name="Resaltar tódalas coincidencias &amp;buscadas"/>
 					<Item subMenuId="search-markOne" name="Resaltar unha coinci&amp;dencia"/>
@@ -117,7 +119,7 @@ Translation note:
 					<Item id="42006" name="&amp;Borrar"/>
 					<Item id="42007" name="Selecc&amp;ionar todo"/>
 					<Item id="42020" name="Selección de inicio/&amp;fin"/>
-					<Item id="42089" name="Selección de inicio/fin en modo columna"/>
+					<Item id="42089" name="Selección de inicio/fin no modo columna"/>
 					<Item id="42084" name="Data e hora (curta)"/>
 					<Item id="42085" name="Data e hora (longa)"/>
 					<Item id="42086" name="Data e hora (personalizada)"/>
@@ -154,6 +156,16 @@ Translation note:
 					<Item id="42074" name="Abrir carpeta contedora no explorador de arquivos"/>
 					<Item id="42075" name="Buscar en Internet"/>
 					<Item id="42076" name="Cambiar motor de busca..."/>
+					<Item id="42090" name="Ignorar maiúsculas e minúsculas &amp;&amp; Palabra completa"/>
+					<Item id="42091" name="Só maiúsculas e minúsculas"/>
+					<Item id="42092" name="Só palabra completa"/>
+					<Item id="42093" name="Coincidir maiúsculas e minúsculas &amp;&amp; Palabra completa"/>
+					<Item id="42094" name="Ignorar maiúsculas e minúsculas &amp;&amp; Palabra completa"/>
+					<Item id="42095" name="Só maiúsculas e minúsculas"/>
+					<Item id="42096" name="Só palabra completa"/>
+					<Item id="42097" name="Coincidir maiúsculas e minúsculas &amp;&amp; Palabra completa"/>
+					<Item id="42098" name="Desfacer a última selección múltiple engadida"/>
+					<Item id="42099" name="Saltar actual &amp;&amp; Ir á seguinte multiselección"/>
 					<Item id="42018" name="&amp;Inicio da gravación"/>
 					<Item id="42019" name="&amp;Fin da gravación"/>
 					<Item id="42021" name="&amp;Reproducir"/>
@@ -292,6 +304,8 @@ Translation note:
 					<Item id="44092" name="Pestana 7"/>
 					<Item id="44093" name="Pestana 8"/>
 					<Item id="44094" name="Pestana 9"/>
+					<Item id="44116" name="Primeira pestana"/>
+					<Item id="44117" name="Derradeira pestana"/>
 					<Item id="44095" name="Pestana seguinte"/>
 					<Item id="44096" name="Pestana anterior"/>
 					<Item id="44097" name="Monitorizando (tail -f)"/>
@@ -304,7 +318,7 @@ Translation note:
 					<Item id="44114" name="Aplicar cor 4"/>
 					<Item id="44115" name="Aplicar cor 5"/>
 					<Item id="44130" name="Mostrar caracteres non imprimibles"/>
-					<Item id="44131" name="Mostrar caracteres de control &amp; &amp; EOL de Unicode"/>
+					<Item id="44131" name="Mostrar caracteres de control &amp;&amp; EOL de Unicode"/>
 					<Item id="44032" name="Activar o modo de pantalla completa"/>
 					<Item id="44033" name="Restaurar zoom 100%"/>
 					<Item id="44034" name="Sempre visible"/>
@@ -334,12 +348,12 @@ Translation note:
 					<Item id="45057" name="OEM 865: Nórdico"/>
 					<Item id="45053" name="OEM 860: Portugués"/>
 					<Item id="45056" name="OEM 863: Francés"/>
-
 					<Item id="10001" name="Mover a outra vista"/>
 					<Item id="10002" name="Clonar noutra vista"/>
 					<Item id="10003" name="Mover a unha ventá nova"/>
 					<Item id="10004" name="Abrir nunha ventá nova"/>
-
+					<Item id="10005" name="Ir ao inicio"/>
+					<Item id="10006" name="Ir ao final"/>
 					<Item id="46001" name="Configurador de estilos..."/>
 					<Item id="46250" name="Defina a súa linguaxe..."/>
 					<Item id="46300" name="Abrir carpeta da linguaxe definida polo usuario..."/>
@@ -358,7 +372,7 @@ Translation note:
 					<Item id="48005" name="Importar complemento(s)..."/>
 					<Item id="48006" name="Importar tema(s)..."/>
 					<Item id="48018" name="Editar menú contextual emerxente"/>
-					<Item id="48009" name="Atallos de teclado..."/>
+					<Item id="48009" name="Configurador de accesos directos..."/>
 					<Item id="48011" name="Preferencias..."/>
 					<Item id="48014" name="Abrir carpeta de complementos..."/>
 					<Item id="48015" name="Administrar complementos..."/>
@@ -389,7 +403,7 @@ Translation note:
 					<Item id="48016" name="Modificar ou borrar accesos directos de macros..."/>
 					<Item id="48017" name="Modificar ou borrar accesos directos de comandos..."/>
 
-					<Item id="11001" name="P&amp;estanas..."/>
+					<Item id="11001" name="&amp;Pestanas..."/>
 					<Item id="11002" name="Nome A a Z"/>
 					<Item id="11003" name="Nome Z a A"/>
 					<Item id="11004" name="Ruta A a Z"/>
@@ -425,6 +439,8 @@ Translation note:
 				<Item CMDID="42030" name="Copiar nome do arquivo"/>
 				<Item CMDID="42031" name="Copiar ruta actual"/>
 				<Item CMDID="3" name="Mover documento"/>
+				<Item CMDID="10005" name="Mover ao inicio"/>
+				<Item CMDID="10006" name="Mover ao final"/>
 				<Item CMDID="10001" name="Mover a outra vista"/>
 				<Item CMDID="10002" name="Clonar noutra vista"/>
 				<Item CMDID="10003" name="Mover a unha nova instancia"/>
@@ -498,21 +514,21 @@ Translation note:
 			</Find>
 
 			<IncrementalFind title="">
-				<Item id="1681" name="Buscar"/>
-				<Item id="1685" name="Coincidir MAIÚS/minús"/>
-				<Item id="1690" name="Marcar todo"/>
+				<Item id="1681" name="Buscar:"/>
+				<Item id="1685" name="&amp;Coincidir MAIÚS/minús"/>
+				<Item id="1690" name="&amp;Marcar todo"/>
 			</IncrementalFind>
 
 			<FindCharsInRange title="Rango de busca de caracteres">
-				<Item id="2" name="Pechar"/>
-				<Item id="2901" name="Caracteres no-ASCII (128-255)"/>
-				<Item id="2902" name="Caracteres ASCII (0-127)"/>
-				<Item id="2903" name="Especifique rango:"/>
+				<Item id="2" name="&amp;Pechar"/>
+				<Item id="2901" name="Caracteres &amp;no-ASCII (128-255)"/>
+				<Item id="2902" name="Carac&amp;teres ASCII (0-127)"/>
+				<Item id="2903" name="Especifique &amp;rango (0–255):"/>
 				<Item id="2906" name="&amp;Arriba"/>
-				<Item id="2907" name="A&amp;baixo"/>
+				<Item id="2907" name="Abai&amp;xo"/>
 				<Item id="2908" name="Dirección"/>
 				<Item id="2909" name="&amp;En bucle"/>
-				<Item id="2910" name="Buscar"/>
+				<Item id="2910" name="&amp;Buscar"/>
 			</FindCharsInRange>
 
 			<GoToLine title="Ir a unha liña...">
@@ -582,13 +598,13 @@ Translation note:
 			<PluginsAdminDlg title="Administrar complementos" titleAvailable="Dispoñible" titleUpdates="Actualizar" titleInstalled="Instalado" titleIncompatible="Incompatible">
 				<ColumnPlugin name="Complemento"/>
 				<ColumnVersion name="Versión"/>
-				<Item id="5501" name="Buscar:"/>
-				<Item id="5503" name="Instalar"/>
-				<Item id="5504" name="Actualizar"/>
-				<Item id="5505" name="Borrar"/>
-				<Item id="5508" name="Seguinte"/>
+				<Item id="5501" name="&amp;Buscar:"/>
+				<Item id="5503" name="&amp;Instalar"/>
+				<Item id="5504" name="&amp;Actualizar"/>
+				<Item id="5505" name="B&amp;orrar"/>
+				<Item id="5508" name="&amp;Seguinte"/>
 				<Item id="5509" name="Versión da lista de complementos:"/>
-				<Item id="5511" name="Repositorio da lista de complementos"/>
+				<Item id="5511" name="Repositorio lista de complementos"/>
 				<Item id="2" name="Pechar"/>
 			</PluginsAdminDlg>
 
@@ -641,17 +657,7 @@ Translation note:
 				<ScintillaCommandsTab name="Comandos Scintilla"/>
 				<ConflictInfoOk name="Non hai conflitos de acceso para este elemento."/>
 				<ConflictInfoEditing name="Sen conflitos..."/>
-				<WindowCategory name="Ventá"/>
-				<FileCategory name="Arquivo"/>
-				<EditCategory name="Editar"/>
-				<SearchCategory name="Buscar"/>
-				<ViewCategory name="Vista"/>
-				<FormatCategory name="Formato"/>
-				<LangCategory name="Idioma"/>
 				<AboutCategory name="Acerca de"/>
-				<SettingCategory name="Configuración"/>
-				<ToolCategory name="Ferramentas"/>
-				<ExecuteCategory name="Executar"/>
 				<ModifyContextMenu name="Modificar"/>
 				<DeleteContextMenu name="Eliminar"/>
 				<ClearContextMenu name="Borrar"/>
@@ -812,7 +818,6 @@ Translation note:
 					<Item id="21101" name="Estilo por defecto"/>
 					<Item id="21102" name="Estilo"/>
 					<Item id="21105" name="Documentación:"/>
-					<Item id="21104" name="Sitio de documentación temporal:"/>
 					<Item id="21106" name="Pregado &amp;compacto (liñas baleiras tamén)"/>
 					<Item id="21220" name="Pregado en estilo código 1:"/>
 					<Item id="21224" name="Abrir:"/>
@@ -965,14 +970,14 @@ Translation note:
 
 					<Item id="6123" name="Idioma"/>
 				</Global>
-				<Scintillas title="Edición">
+
+				<Scintillas title="Edición 1">
 					<Item id="6216" name="Configuración do cursor"/>
 					<Item id="6217" name="Anchura:"/>
 					<Item id="6219" name="Intermitencia:"/>
 					<Item id="6221" name="R"/>
 					<Item id="6222" name="L"/>
 					<Item id="6246" name="Comandos de pregado/despregado do nivel actual conmutables"/>
-					<Item id="6225" name="Habilitar edición múltiple (Ctrl. + clic/selección)"/>
 					<Item id="6227" name="Axuste de liña"/>
 					<Item id="6228" name="Por defecto"/>
 					<Item id="6229" name="Aliñado"/>
@@ -980,23 +985,32 @@ Translation note:
 					<Item id="6234" name="Desactivar desprazamento avanzado (se ten problemas coa pantalla táctil)"/>
 					<Item id="6215" name="Suavizar a fonte"/>
 					<Item id="6236" name="Permitir desprazamento despois da última liña"/>
-					<Item id="6239" name="Manter a selección si preme o botón dereito fóra da selección"/>
+					<Item id="6239" name="Manter a selección se preme o botón dereito fóra da selección"/>
 					<Item id="6245" name="Habilitar espazo virtual"/>
+					<Item id="6214" name="Permitir copiar/cortar liña sin selección"/>
 					<Item id="6651" name="Indicador de liña actual"/>
 					<Item id="6652" name="Ningún"/>
 					<Item id="6653" name="Fondo resaltado"/>
 					<Item id="6654" name="Marco"/>
 					<Item id="6655" name="Anchura"/>
+				</Scintillas>
+
+				<Scintillas2 title="Edición 2">
+					<Item id="6521" name="Edición múltiple"/>
+					<Item id="6522" name="Activar a edición múltiple (Ctrl+clic do rato/selección)"/>
+					<Item id="6523" name="Habilitar a selección de columnas para a edición múltiple"/>
 					<Item id="6247" name="EOL (CRLF)"/><!-- Don't translate "(CRLF)" -->
 					<Item id="6248" name="Predeterminado"/>
 					<Item id="6249" name="Texto sin formato"/>
 					<Item id="6250" name="Cor personalizada"/>
 					<Item id="6252" name="Caracteres non imprimibles"/>
+					<Item id="6260" name="Apariencia"/>
 					<Item id="6254" name="Abreviatura"/>
 					<Item id="6255" name="Punto de código"/>
 					<Item id="6256" name="Cor personalizada"/>
-					<Item id="6258" name="Aplicar a C0, C1 &amp; &amp; EOL de Unicode"/>
-				</Scintillas>
+					<Item id="6258" name="Aplicar axustes de apariencia a C0, C1 &amp;&amp; EOL de Unicode"/>
+					<Item id="6259" name="Impedir a introducción de caracteres de control (código C0) no documento"/>
+				</Scintillas2>
 
 				<DarkMode title="Modo escuro">
 					<Item id="7131" name="Modo claro"/>
@@ -1038,11 +1052,11 @@ Translation note:
 					<Item id="6292" name="Ancho dinámico"/>
 					<Item id="6293" name="Ancho fixo"/>
 					<Item id="6207" name="Mostrar marcador"/>
-					<Item id="6223" name="Mostrar marcas de cambios"/>
+					<Item id="6295" name="Historial de cambios"/>
+					<Item id="6223" name="Mostralos na marxen"/>
+					<Item id="6296" name="Mostralos no texto"/>
 					<Item id="6211" name="Configuración do bordo vertical"/>
 					<Item id="6213" name="Resaltar fondo de liñas"/>
-					<Item id="6237" name="Engada o seu marcador de columna indicando a súa posición cun número decimal.
-Pode definir varios marcadores de columna utilizando espazos en branco para separar os diferentes números."/>
 					<Item id="6231" name="Ancho do bordo"/>
 					<Item id="6235" name="Sen recadro"/>
 					<Item id="6208" name="Recheo"/>
@@ -1080,6 +1094,7 @@ Pode definir varios marcadores de columna utilizando espazos en branco para sepa
 					<Item id="4009" name="Extensións soportadas:"/>
 					<Item id="4010" name="Extensións rexistradas:"/>
 				</FileAssoc>
+				
 				<Language title="Linguaxes">
 					<Item id="6505" name="Dispoñibles"/>
 					<Item id="6506" name="Desactivadas"/>
@@ -1110,30 +1125,30 @@ Pode definir varios marcadores de columna utilizando espazos en branco para sepa
 				</Highlighting>
 
 				<Print title="Impresión">
-					<Item id="6601" name="Imprimir número de liña"/>
+					<Item id="6601" name="Im&amp;primir número de liña"/>
 					<Item id="6602" name="Opcións de cor"/>
-					<Item id="6603" name="Sen modificar"/>
-					<Item id="6604" name="Invertir"/>
-					<Item id="6605" name="Negro sobre branco"/>
-					<Item id="6606" name="Sen cor de fondo"/>
-					<Item id="6607" name="Marxes (milímetros)"/>
-					<Item id="6612" name="Esquerdo"/>
-					<Item id="6613" name="Superior"/>
-					<Item id="6614" name="Dereito"/>
-					<Item id="6615" name="Inferior"/>
-					<Item id="6706" name="Grosa"/>
-					<Item id="6707" name="Cursiva"/>
+					<Item id="6603" name="Sen &amp;modificar"/>
+					<Item id="6604" name="In&amp;vertir"/>
+					<Item id="6605" name="Negro sobre &amp;branco"/>
+					<Item id="6606" name="Sen cor de &amp;fondo"/>
+					<Item id="6607" name="Mar&amp;xes (milímetros)"/>
+					<Item id="6612" name="Esquerd&amp;o"/>
+					<Item id="6613" name="&amp;Superior"/>
+					<Item id="6614" name="&amp;Dereito"/>
+					<Item id="6615" name="I&amp;nferior"/>
+					<Item id="6706" name="&amp;Grosa"/>
+					<Item id="6707" name="&amp;Cursiva"/>
 					<Item id="6708" name="Encabezamento"/>
-					<Item id="6709" name="Parte esquerda"/>
-					<Item id="6710" name="Parte central"/>
+					<Item id="6709" name="Part&amp;e esquerda"/>
+					<Item id="6710" name="Parte centra&amp;l"/>
 					<Item id="6711" name="Parte dereita"/>
-					<Item id="6717" name="Grosa"/>
-					<Item id="6718" name="Cursiva"/>
+					<Item id="6717" name="Gros&amp;a"/>
+					<Item id="6718" name="C&amp;ursiva"/>
 					<Item id="6719" name="Pé de páxina"/>
-					<Item id="6720" name="Parte esquerda"/>
-					<Item id="6721" name="Parte central"/>
-					<Item id="6722" name="Parte dereita"/>
-					<Item id="6723" name="Engadir"/>
+					<Item id="6720" name="Parte es&amp;querda"/>
+					<Item id="6721" name="Parte cen&amp;tral"/>
+					<Item id="6722" name="Pa&amp;rte dereita"/>
+					<Item id="6723" name="Engad&amp;ir"/>
 					<ComboBox id="6724">
 						<Element name="Ruta do arquivo"/>
 						<Element name="Nome do arquivo"/>
@@ -1143,7 +1158,7 @@ Pode definir varios marcadores de columna utilizando espazos en branco para sepa
 						<Element name="Data longa"/>
 						<Element name="Hora"/>
 					</ComboBox>
-					<Item id="6725" name="Opcións:"/>
+					<Item id="6725" name="&amp;Opcións:"/>
 					<Item id="6727" name="Móstranse os seus axustes variables"/>
 					<Item id="6728" name="Cabeceira e pé de páxina"/>
 				</Print>
@@ -1153,10 +1168,11 @@ Pode definir varios marcadores de columna utilizando espazos en branco para sepa
 					<Item id="6903" name="O cadro de diálogo permanece aberto despois da busca que mostra a ventá de resultados"/>
 					<Item id="6904" name="Confirmar &quot;Substituír todo&quot; en tódolos documentos abertos"/>
 					<Item id="6905" name="Substituír: non moverse á seguinte coincidencia"/>
-					<Item id="6906" name="Ventá de resultados de busca: mostrar só unha entrada por liña encontrada"/>
+					<Item id="6906" name="Ventá de resultados de busca: mostrar, se é posible, só unha entrada por liña encontrada"/>
 					<Item id="6907" name="Ao abrir o cadro de busca"/>
 					<Item id="6908" name="Encher o campo de busca co texto seleccionado"/>
 					<Item id="6909" name="Seleccionar a palabra baixo o cursor se non hai nada seleccionado"/>
+					<Item id="6910" name="Tamaño para a comprobación automática en &quot;Selección&quot;"/>
 				</Searching>
 
 				<RecentFilesHistory title="Arquivos recentes">
@@ -1171,12 +1187,13 @@ Pode definir varios marcadores de columna utilizando espazos en branco para sepa
 				</RecentFilesHistory>
 
 				<Backup title="Copias de seguridade">
-					<Item id="6817" name="Copias de seguridade e sesións"/>
-					<Item id="6818" name="Automatizar copias de seguridade e sesións"/>
+					<Item id="6817" name="Copias de seguridade e de sesións"/>
+					<Item id="6818" name="Automatizar copias de seguridade e de sesións"/>
 					<Item id="6819" name="Realizar copias cada"/>
 					<Item id="6821" name="segundos"/>
 					<Item id="6822" name="Gardar en:"/>
 					<Item id="6309" name="Recordar a sesión actual no próximo inicio"/>
+					<Item id="6825" name="Recordar os arquivos inaccesibles da sesión anterior"/>
 					<Item id="6801" name="Copia de seguridade"/>
 					<Item id="6315" name="Non facer"/>
 					<Item id="6316" name="Copia simple"/>
@@ -1219,7 +1236,7 @@ Pode definir varios marcadores de columna utilizando espazos en branco para sepa
 					<Item id="6175" name="Orden inverso de data e hora predeterminada (formatos curto &amp;&amp; longo)"/>
 					<Item id="6172" name="Formato personalizado:"/>
 					<Item id="6181" name="Estado do panel e [-nosesión] *"/>
-					<Item id="6182" name="Recordar o estado do panel (o panel está aberto) en outras instancias (modo múltiples instancias) ou cando use o comando [-nosession]"/>
+					<Item id="6182" name="Recordar o estado do panel (se está aberto) en outras instancias (modo múltiples instancias) ou cando use o comando [-nosession]"/>
 					<Item id="6183" name="Historial do portapapeis"/>
 					<Item id="6184" name="Lista de documentos"/>
 					<Item id="6185" name="Panel de caracteres"/>
@@ -1245,12 +1262,13 @@ Pode definir varios marcadores de columna utilizando espazos en branco para sepa
 					<Item id="7141" name="Restriccións para arquivos de gran tamaño"/>
 					<Item id="7143" name="Activar restriccións para arquivos grandes (sin resaltado de sintaxe)"/>
 					<Item id="7144" name="Defina o tamaño de arquivo grande:"/>
-					<Item id="7146" name="MB (1 - 4096)"/>
+					<Item id="7146" name="MB (1 - 2046)"/>
 					<Item id="7147" name="Permitir a coincidencia de corchetes"/>
 					<Item id="7148" name="Permitir o autocompletado"/>
 					<Item id="7149" name="Permitir o resaltado intelixente"/>
 					<Item id="7150" name="Desactivar globalmente o axuste do texto"/>
 					<Item id="7151" name="Permitir ligazón clicable na URL"/>
+					<Item id="7152" name="Suprimir advertencia ao abrir arquivos de 2 GB ou maiores"/>
 				</Performance>
 
 				<Cloud title="Nube &amp; Ligazóns">
@@ -1365,7 +1383,7 @@ Pode reactivalo en Preferencias se o desexa."/>
 				<Item id="6" name="&amp;Si"/>
 				<Item id="7" name="&amp;Non"/>
 				<Item id="4" name="Sem&amp;pre si"/>
-			</DoSaveAll><!-- HowToReproduce: Check the 'Enable Save All confirm dialog' checkbox in Preference->MISC, now click 'Save all' -->
+			</DoSaveAll><!-- HowToReproduce: Check the &quot;Enable Save All confirm dialog&quot; checkbox in Preference->MISC, now click &quot;Save all&quot; -->
 		</Dialog>
 		<MessageBox>
 			<!-- $INT_REPLACE$ and $STR_REPLACE$ are place holders, don't translate these place holders. -->
@@ -1381,16 +1399,17 @@ As modificacións gardadas non se poden desfacer.
 ¿Continuar?"/><!-- HowToReproduce: when you openned file is modified and saved, then you are changing file encoding. -->
 			<CannotMoveDoc title="Mover á nova instancia de Notepad++" message="O documento foi modificado. Gárdeo e volva a intentalo."/><!-- HowToReproduce: From your Notepad++ drag & drop a clean (not dirty) file to outside of Notepad++, another instance of Notepad++ will be created. Then from your first Notepad++ drag & drop an unsaved file to the new instance. -->
 			<DocReloadWarning title="Recargar" message="¿Está seguro de que desexa volver a cargar o arquivo actual e perder os cambios feitos en Notepad++?"/>
-			<FileLockedWarning title="Imposible gardalo" message="Comprobe si este arquivo está aberto por outro programa"/>
+			<FileLockedWarning title="Imposible gardalo" message="Comprobe se este arquivo está aberto por outro programa"/>
 			<FileAlreadyOpenedInNpp title="Información" message="O arquivo xa está aberto en Notepad++."/><!-- HowToReproduce: Open a new document and open a file "c:/tmp/foo", save this new document by choosing "c:/tmp/foo" as file to save, reply the override popup "yes", then this message appears. -->
 			<RenameTabTemporaryNameAlreadyInUse title="Non se puido cambiar o nome" message="O nome especificado xa está en uso noutra pestana."/><!-- HowToReproduce: Rename the tab of an untitled document and provide a name that is the same as an already-existing tab of an untitled document. -->
+			<RenameTabTemporaryNameIsEmpty title="No se puido cambiar o nome" message="O nome non pode estar baleiro ou non pode ser só espazo(s) ou TAB(s)."/><!-- HowToReproduce: Rename the tab of an untitled document and provide an empty string or only some white speces. -->
 			<DeleteFileFailed title="Borrar arquivo" message="Erro ao borrar o arquivo"/><!-- HowToReproduce: this message prevents from system failure. It's hard to reproduce. -->
 
 			<NbFileToOpenImportantWarning title="A cantidade de arquivos para abrir é demasiado grande" message="Abriranse $INT_REPLACE$ arquivos.
 ¿Desexa abrir todos estes arquivos?"/><!-- HowToReproduce: Check "Open all files of folder instead of launching Folder as Workspace on folder dropping" in "Default Directory" of Preferences dialog, then drop a folder which contains more then 200 files into Notepad++. -->
-			<SettingsOnCloudError title="Configuración na nube" message="Parece que a ruta da configuración na nube establécese nunha unidade de só lectura 
+			<SettingsOnCloudError title="Configuración na nube" message="Parece que a ruta da configuración na nube establécese nunha unidade de só lectura
 ou nunha carpeta que necesita dereito de acceso para escritura.
-A súa configuración na nube será cancelada. Reinicie cun valor coherente usando o cadro de diálogo de Preferencias."/>
+A súa configuración na nube cancelarase. Reinicie cun valor coherente usando o cadro de diálogo de Preferencias."/>
 			<FilePathNotFoundWarning title="Abrir arquivo" message="O arquivo que está intentando abrir non existe."/><!-- HowToReproduce: this message prevents from system failure. It's hard to reproduce. -->
 			<SessionFileInvalidError title="Non se puido cargar a sesión" message="O arquivo de sesión está danado ou non é válido."/><!-- HowToReproduce: Save current session via menu "File -> Save Session...", use another editor to modify the session you saved to make it an invalid xml file. Then load this invalid session via menu "File -> Load Session...". -->
 			<DroppingFolderAsProjectModeWarning title="Acción non válida" message="Só pode soltar arquivos ou carpetas, pero non ambos, porque está soltando Carpeta como modo Proxecto.
@@ -1408,10 +1427,10 @@ Hai 3 formas de cambiar ao modo de selección de columnas:
 3- Co teclado ou co rato
  Marque co cursor a posición desexada do inicio do bloque de
  columnas e aplique a opción
- &quot;Selección de inicio/fin en modo columna&quot;.
+ &quot;Selección de inicio/fin no modo columna&quot;.
  Mova o cursor á posición desexada ao final do bloque de columnas,
  marque e a continuación aplique de novo a opción
- &quot;Selección de inicio/fin en modo columna&quot;."/>
+ &quot;Selección de inicio/fin no modo columna&quot;."/>
 			<BufferInvalidWarning title="Erro ao gardar" message="Non se pode gardar: o búfer no é válido."/><!-- HowToReproduce: this message prevents from system failure. It's hard to reproduce. -->
 			<DoCloseOrNot title="Conservar arquivo non existente" message="O arquivo &quot;$STR_REPLACE$&quot; non existe.
 ¿Manter este arquivo no editor?"/>
@@ -1432,7 +1451,7 @@ Este arquivo foi modificado por outro programa.
 			<PrehistoricSystemDetected title="Detectado sistema obsoleto" message="Parece que está usando un sistema obsoleto. Lamentablemente esta función só funciona nun sistema máis moderno."/><!-- HowToReproduce: Launch "Document Map" under Windows XP. -->
 			<XpUpdaterProblem title="Actualizador Notepad++" message="O actualizador de Notepad++ non é compatible con XP debido á capa de seguridade obsoleta en XP.
 ¿Desexa ir á páxina de Notepad++ para descargar a última versión?"/><!-- HowToReproduce: Run menu "? -> Update Notepad++" under Windows XP. -->
-			<GUpProxyConfNeedAdminMode title="Configuración do proxy" message="Para cambiar a configuración do proxy, reinicie Notepad++ en modo Administrador."/>
+			<GUpProxyConfNeedAdminMode title="Configuración do proxy" message="Para cambiar a configuración do proxy, reinicie Notepad++ no modo Administrador."/>
 			<DocTooDirtyToMonitor title="Problema de monitorización" message="O documento non está limpo. Garde as modificacións antes de monitorealo."/>
 			<DocNoExistToMonitor title="Problema de monitorización" message="O arquivo debe existir para ser monitoreado."/>
 			<FileTooBigToOpen title="Problema de tamaño de arquivo" message="O arquivo é demasiado grande para abrilo con Notepad++"/><!-- HowToReproduce: Try to open a 4GB file (it's not easy to reproduce, it depends on your system). -->
@@ -1443,9 +1462,9 @@ Desexa abrilo?"/>
 			<CreateNewFileError title="Crear un arquivo novo" message="Non se pode crear o arquivo &quot;$STR_REPLACE$&quot;."/><!-- HowToReproduce: this message prevents from system failure. It's hard to reproduce. -->
 			<OpenFileError title="Erro" message="Non se pode abrir o arquivo &quot;$STR_REPLACE$&quot;."/>
 			<OpenFileNoFolderError title="Non se pode abrir o arquivo" message="&quot;$STR_REPLACE1$&quot; non se pode abrir:
-            A carpeta &quot;$STR_REPLACE2$&quot; non existe."/>
+A carpeta &quot;$STR_REPLACE2$&quot; non existe."/>
 			<FileBackupFailed title="Erro na copia de seguridade do arquivo" message="A versión anterior do arquivo non se puido gardar no directorio de copia de seguridade en &quot;$STR_REPLACE$&quot;.
-            
+			
 ¿Desexa gardar o arquivo actual de todos modos?"/><!-- HowToReproduce: this message prevents from system failure. It's hard to reproduce. -->
 			<LoadStylersFailed title="Erro ao cargar stylers.xml" message="A carga de &quot;$STR_REPLACE$&quot; fallou"/>
 			<LoadLangsFailed title="Configurador" message="A carga de langs.xml fallou.
@@ -1478,7 +1497,7 @@ Parece que o arquivo para abrir no é un arquivo de proxecto válido."/>
 ¿Desexa iniciar Notepad++ en modo Administrador?"/>
 			<OpenInAdminModeFailed title="Erro ao abrir en modo Administrador" message="Notepad++ non se pode abrir no modo Administrador."/><!-- HowToReproduce: When you have no Admin privilege and you try to save a modified file in a protected location (for example: any file in sub-folder of "C:\Program Files\". This message will appear after replying "Yes" to "Open in Admin mode" dialog. -->
 			<ViewInBrowser title="Ver arquivo actual no navegador" message="Non se pode encontrar a aplicación no seu sistema."/>
-			<ExitToUpdatePlugins title="Está a punto de saír de Notepad++" message="Si fai clic en SI, salirá de Notepad++ para continuar coas operacións.
+			<ExitToUpdatePlugins title="Está a punto de saír de Notepad++" message="Se fai clic en SI, salirá de Notepad++ para continuar coas operacións.
 Notepad++ reiniciarase despois de que rematen todas.
 ¿Continuar?"/>
 			<NeedToRestartToLoadPlugins title="Necesita reiniciar Notepad++" message="Debe reiniciar Notepad++ para cargar os complementos que instalou."/><!-- HowToReproduce: Import a plugin via menu "Settings->Import->Import Plugin(s)...". -->
@@ -1488,11 +1507,25 @@ Notepad++ reiniciarase despois de que rematen todas.
 			<SwitchUnsavedThemeWarning title="$STR_REPLACE$" message="¡Os cambios non gardados serán descartados!
 ¿Quere gardar os cambios antes de cambiar de tema?"/><!-- HowToReproduce: In the Style Configurator dialog change some theme and switch to other theme without saving. -->
 			<MacroAndRunCmdlWarning title="Compatibilidade de Macro e Executar" message="Os comandos Macro e Executar gardados en Notepad++ v.8.5.2 (ou anterior) poden non ser compatibles coa versión actual de Notepad++.
-Probe estes comandos e, si é necesario, volva a editalos.
+Probe estes comandos e, se é necesario, volva a editalos.
 
 Alternativamente, pode reinstalar Notepad++ v8.5.2 e restaurar os seus datos anteriores.
 Notepad++ fará unha copia de seguridade do seu antigo &quot;shortcuts.xml&quot; e gardarao como &quot;shortcuts.xml.v8.5.2.backup&quot;.
 Cambie o nome de &quot;shortcuts.xml.v8.5.2.backup&quot; -&gt; &quot;shortcuts.xml&quot; e os comandos serán restaurados e funcionales de novo."/><!-- HowToReproduce: Close Notepad++, remove shortcuts.xml.v8.5.2.backup & v852ShortcutsCompatibilityWarning.xml if present, relaunch Notepad++, delete or modify a shortcuts via Shortcut Mapper, close Notepad++, then the message will show up -->
+			<NotEnoughRoom4Saving title="Gardado fallido" message="Non se  pode gardar o arquivo.
+Parece que non hai espazo suficiente no disco e non é posible gardalo."/>
+			<FileInaccessibleUserSession title="Arquivo inaccesible" message="Algúns arquivos da súa sesión gardada manualmente &quot;$STR_REPLACE$&quot; están inaccesibles. Pódense abrir como documentos baleiros e de só lectura como marcadores de posición.
+
+¿Quere crear esos marcadores de posición?
+
+NOTA: Se elixe non crear os marcadores de posición ou cerrarlos máis tarde, a súa sesión gardada manualmente NON se modificará ao saír."/>
+			<FileInaccessibleDefaultSessionXml title="Arquivo inaccesible" message="Algúns arquivos da súa sesión anterior están inaccesibles. Pódense abrir como documentos baleiros e de só lectura como marcadores de posición.
+
+¿Quere crear esos marcadores de posición?
+
+NOTA: ¡Se elixe non crear os marcadores de posición ou cerrarlos máis tarde, a súa sesión SERÁ MODIFICADA AO SAÍR! Suxerímoslle que faga unha copia de seguridade do seu &quot;session.xml&quot; agora."/>
+			<RTLvsDirectWrite title="Non se pode executar RTL" message="RTL non é compatible co modo DirectWrite. Desactíveo en Configuración -> Preferencias -> Varios e reinicie Notepad++."/>
+			<FileMemoryAllocationFailed title="Excepción: fallo na asignación de memoria para os arquivos" message="É posible que non haxa memoria suficiente dispoñible para os arquivos que quere abrir con Notepad++."/><!-- HowToReproduce: Try to open multiple files with total size > ~700MB in the x86 Notepad++ (it will depend on the PC memory configuration and the current system memory usage...). -->
 		</MessageBox>
 		<ClipboardHistory>
 			<PanelTitle name="Historial do portapapeis"/>
@@ -1605,7 +1638,7 @@ Cambie o nome de &quot;shortcuts.xml.v8.5.2.backup&quot; -&gt; &quot;shortcuts.x
 			<!-- Don't translate "(&quot;EOL custom color&quot;)" -->
 			<eol-custom-color-tip value="Ir ao &quot;Configurador de estilos&quot; para cambiar a cor personalizada EOL por defecto (&quot;EOL custom color&quot;)."/>
 
-			<word-chars-list-warning-begin value="Cuidado:"/>
+			<word-chars-list-warning-begin value="Cuidado: "/>
 			<word-chars-list-space-warning value="$INT_REPLACE$ espazo(s)"/>
 			<word-chars-list-tab-warning value="$INT_REPLACE$ TAB(s)"/>
 			<word-chars-list-warning-end value="na súa lista de caracteres."/><!-- HowToReproduce: In "Delimiter" section of Preferences dialog, check "Add your character as part of word\r(don't choose it unless you know what you're doing)", then type a white-space in the text field. -->
@@ -1616,7 +1649,6 @@ Cambie o nome de &quot;shortcuts.xml.v8.5.2.backup&quot; -&gt; &quot;shortcuts.x
 			<default-open-save-select-folder value="Seleccionar unha carpeta como directorio predeterminado"/><!-- HowToReproduce: Settings > Preferences > Default Directory > [...] -->
 			<shift-change-direction-tip value="Use Maiús+Enter para buscar na dirección contraria"/>
 			<two-find-buttons-tip value="Modo de busca de 2 botóns"/>
-			<file-rename-title value="Renomear"/>
 			<find-in-files-filter-tip value="Buscar cpp, cxx, h, hxx &amp;&amp; hpp:
 *.cpp *.cxx *.h *.hxx *.hpp
 
@@ -1633,18 +1665,14 @@ Buscar en tódolos arquivos pero excluir tódalas carpetas de rexistro ou rexist
 			<find-status-end-reached value="Encontrada a primera coincidencia empezando polo inicio. Chegouse ao final do documento."/>
 			<find-status-replaceinfiles-1-replaced value="Substituír en arquivos: cambiado 1 elemento."/>
 			<find-status-replaceinfiles-nb-replaced value="Substituír en arquivos: $INT_REPLACE$ coincidencias cambiadas."/>
-			<find-status-replaceinfiles-re-malformed value="Substituír en arquivos abertos: a expresión regular ten un formato incorrecto."/>
 			<find-status-replaceinopenedfiles-1-replaced value="Substituír en arquivos abertos: cambiada 1 coincidencia."/>
 			<find-status-replaceinopenedfiles-nb-replaced value="Substituír en arquivos abertos: $INT_REPLACE$ coincidencias cambiadas."/>
-			<find-status-mark-re-malformed value="Atención: a expresión regular para buscar ten un formato incorrecto."/>
 			<find-status-invalid-re value="Atención: expresión regular non válida."/>
 			<find-status-search-failed value="Atención: a busca fallou."/>
 			<find-status-mark-1-match value="1 coincidencia"/>
 			<find-status-mark-nb-matches value=" $INT_REPLACE$ coincidencias"/>
-			<find-status-count-re-malformed value="Atención: a expresión regular para buscar ten un formato incorrecto."/>
 			<find-status-count-1-match value="Encontrada 1 coincidencia"/>
 			<find-status-count-nb-matches value="Encontradas $INT_REPLACE$ coincidencias"/>
-			<find-status-replaceall-re-malformed value="Atención: a expresión regular ten un formato incorrecto."/>
 			<find-status-replaceall-1-replaced value="1 coincidencia cambiada"/>
 			<find-status-replaceall-nb-replaced value=" $INT_REPLACE$ coincidencias cambiadas."/>
 			<find-status-replaceall-readonly value="Atención: non se pode substituír o texto. O documento actual é de só lectura."/>
@@ -1656,6 +1684,7 @@ Buscar en tódolos arquivos pero excluir tódalas carpetas de rexistro ou rexist
 			<find-status-replace-not-found value="Non se encontrou ningunha coincidencia."/>
 			<find-status-replace-readonly value="Atención: non se pode modificar o texto. O documento actual é de só lectura."/>
 			<find-status-cannot-find value="Atención: non se pode encontrar o texto &quot;$STR_REPLACE$&quot;"/>
+			<find-status-cannot-find-pebkac-maybe value="Non se pode encontrar a expresión indicada. Pode que esquecera marcar &quot;Buscar en todo o documento&quot; e desmarcar &quot;Coincidir maiúsculas y minúsculas&quot; ou &quot;Só palabra completa&quot;."/>
 			<find-status-scope-selection value="no texto seleccionado."/>
 			<find-status-scope-all value="en todo o arquivo."/>
 			<find-status-scope-backward value="desde o inicio do arquivo até o cursor."/>
@@ -1665,36 +1694,33 @@ Buscar en tódolos arquivos pero excluir tódalas carpetas de rexistro ou rexist
 			<finder-collapse-all value="Contraer todo"/>
 			<finder-uncollapse-all value="Expandir todo"/>
 			<finder-copy value="Copiar liña(s) seleccionada(s)"/>
-			<finder-copy-verbatim value="Copiar"/>
 			<finder-copy-paths value="Copiar nome(s) de ruta(s)"/>
-			<finder-select-all value="Seleccionar todo"/>
 			<finder-clear-all value="Limpar todo"/>
 			<finder-open-all value="Abrir todo"/>
 			<finder-purge-for-every-search value="Depurar para cada busca"/>
 			<finder-wrap-long-lines value="Axustar lonxitude do texto"/>
 			<common-ok value="OK"/>
 			<common-cancel value="Cancelar"/>
-			<common-name value="Nome:"/>
+			<common-name value="Nome"/>
 			<tabrename-title value="Renomear pestana actual"/>
-			<tabrename-newname value="Novo nome:"/>
+			<tabrename-newname value="Nome novo"/>
 			<splitter-rotate-left value="Xirar á esquerda"/>
 			<splitter-rotate-right value="Xirar á dereita"/>
 			<userdefined-title-new value="Crear nova linguaxe..."/>
 			<userdefined-title-save value="Gardar linguaxe actual como..."/>
 			<userdefined-title-rename value="Renomear o arquivo de linguaxe"/>
 			<summary value="Resumo"/>
-			<summary-filepath value="Ruta completa do arquivo:"/>
-			<summary-filecreatetime value="Creado:"/>
-			<summary-filemodifytime value="Modificado:"/>
-			<summary-nbchar value="Caracteres (sen terminacións de liña):"/>
-			<summary-nbword value="Palabras:"/>
-			<summary-nbline value="Liñas:"/>
-			<summary-nbbyte value="Lonxitude do documento:"/>
+			<summary-filepath value="Ruta completa do arquivo: "/>
+			<summary-filecreatetime value="Creado: "/>
+			<summary-filemodifytime value="Modificado: "/>
+			<summary-nbchar value="Caracteres (sen terminacións de liña): "/>
+			<summary-nbword value="Palabras: "/>
+			<summary-nbline value="Liñas: "/>
+			<summary-nbbyte value="Lonxitude do documento: "/>
 			<summary-nbsel1 value=" caracteres seleccionados ("/>
 			<summary-nbsel2 value=" bytes) en "/>
 			<summary-nbrange value=" rangos"/>
-			<progress-hits-title value="Coincidencias:"/>
-			<progress-cancel-button value="Cancelar"/>
+			<progress-hits-title value="Coincidencias: "/>
 			<progress-cancel-info value="Cancelando operación, por favor espere..."/>
 			<find-in-files-progress-title value="Progreso da busca en arquivos..."/>
 			<replace-in-files-confirm-title value="¿Está seguro?"/>
@@ -1709,6 +1735,11 @@ Buscar en tódolos arquivos pero excluir tódalas carpetas de rexistro ou rexist
 			<find-result-title value="Buscar"/><!-- Must not begin with space or tab character -->
 			<find-result-title-info value="(Hai $INT_REPLACE1$ coincidencia(s) en $INT_REPLACE2$ arquivo(s) de $INT_REPLACE3$ procura(s))"/>
 			<find-result-title-info-selections value="(Hai $INT_REPLACE1$ coincidencias en $INT_REPLACE2$ seleccións de $INT_REPLACE3$ procuras)"/>
+			<find-result-title-info-options-searchmode-normal value="Normal"/>
+			<find-result-title-info-options-searchmode-extended value="Extendido"/>
+			<find-result-title-info-options-searchmode-regexp value="RegEx"/>
+			<find-result-title-info-options-case value="Maiúsculas - Minúsculas"/>
+			<find-result-title-info-options-word value="Palabra"/>
 			<find-result-title-info-extra value=" - Modo de filtro: mostrar só os resultados buscados"/>
 			<find-result-hits value="($INT_REPLACE$ coincidencias)"/>
 			<find-result-line-prefix value="Liña"/><!-- Must not begin with space or tab character -->
@@ -1730,7 +1761,7 @@ Buscar en tódolos arquivos pero excluir tódalas carpetas de rexistro ou rexist
 NOTA:
 1. A modificación das opcións implica reabrir os arquivos grandes que teña abertos para obter un comportamento adecuado.
 
-2. Si &quot;Desactivar globalmente o axuste do texto&quot; está marcado e abre un arquivo grande, &quot;Axuste do texto&quot; desactivarase para tódolos arquivos. Pode volver a activalo a través do menú Vista en &quot;Axuste do texto&quot;."/>
+2. Se &quot;Desactivar globalmente o axuste do texto&quot; está marcado e abre un arquivo grande, &quot;Axuste do texto&quot; desactivarase para tódolos arquivos. Pode volver a activalo a través do menú Vista en &quot;Axuste do texto&quot;."/>
 			<npcNote-tip value="Representación de espazos en branco seleccionados &quot;non ASCII&quot; e caracteres non imprimibles (de control).
 
 NOTA:
@@ -1757,6 +1788,8 @@ Faga clic no botón dereito &quot;?&quot; para abrir o sitio web do manual do us
 			<!-- Don't translate "(&quot;Non-printing characters custom color&quot;)" -->
 			<npcCustomColor-tip value="Vaia ao Configurador de estilos para cambiar a cor personalizada por defecto dos espazos en branco e caracteres non imprimibles seleccionados. (&quot;Non-printing characters custom color&quot;)."/>
 			<npcIncludeCcUniEol-tip value="Aplicar axustes de apariencia de caracteres non imprimibles aos caracteres de control C0, C1 e Unicode EOL (liña seguinte, separador de liña e separador de párrafo)."/>
+			<searchingInSelThresh-tip value="Número de caracteres seleccionados na zona de edición para marcar automáticamente o recadro &quot;Selección&quot; cando se activa o diálogo Buscar. O valor máximo é 1024. Estableza o valor en 0 para desactivar a comprobación automática."/>
+			<verticalEdge-tip value="Engada o seu marcador de columna indicando a súa posición cun número decimal. Pode definir varios marcadores utilizando espazos en branco para separar os distintos números."/>
 		</MiscStrings>
 	</Native-Langue>
 </NotepadPlus>

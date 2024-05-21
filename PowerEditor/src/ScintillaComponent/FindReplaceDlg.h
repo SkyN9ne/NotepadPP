@@ -30,7 +30,6 @@
 #define FIND_INVALID_REGULAR_EXPRESSION -2
 
 #define FINDREPLACE_MAXLENGTH 2048
-#define FINDREPLACE_INSEL_TEXTSIZE_THRESHOLD 1024
 
 #define FINDTEMPSTRING_MAXSIZE 1024*1024
 
@@ -83,7 +82,7 @@ struct FindOption
 	bool _isProjectPanel_2 = false;
 	bool _isProjectPanel_3 = false;
 	bool _dotMatchesNewline = false;
-	bool _isMatchLineNumber = true; // only for Find in Folder
+	bool _isMatchLineNumber = false; // always false for main search
 };
 
 //This class contains generic search functions as static functions for easy access
@@ -125,7 +124,7 @@ public:
 	void addSearchLine(const TCHAR *searchName);
 	void addFileNameTitle(const TCHAR * fileName);
 	void addFileHitCount(int count);
-	void addSearchHitCount(int count, int countSearched, bool isMatchLines, bool searchedEntireNotSelection);
+	void addSearchResultInfo(int count, int countSearched, bool searchedEntireNotSelection, const FindOption *pFindOpt);
 	const char* foundLine(FoundInfo fi, SearchResultMarkingLine mi, const TCHAR* foundline, size_t totalLineNumber);
 	void setFinderStyle();
 	void setFinderStyleForNpc(bool onlyColor = false);
@@ -136,7 +135,7 @@ public:
 	void copy();
 	void copyPathnames();
 	void beginNewFilesSearch();
-	void finishFilesSearch(int count, int searchedCount, bool isMatchLines, bool searchedEntireNotSelection);
+	void finishFilesSearch(int count, int searchedCount, bool searchedEntireNotSelection, const FindOption *pFindOpt);
 	
 	void gotoNextFoundResult(int direction);
 	std::pair<intptr_t, intptr_t> gotoFoundLine(size_t nOccurrence = 0); // value 0 means this argument is not used
@@ -146,6 +145,9 @@ public:
 	void setVolatiled(bool val) { _canBeVolatiled = val; };
 	generic_string getHitsString(int count) const;
 
+	LRESULT scintillaExecute(UINT msg, WPARAM wParam = 0, LPARAM lParam = 0) const {
+		return _scintView.execute(msg, wParam, lParam);
+	}
 protected :
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	bool notify(SCNotification *notification);
@@ -157,7 +159,7 @@ private:
 
 	struct CurrentPosInLineInfo {
 		CurrentPosInLineStatus _status = pos_infront;
-		intptr_t auxiliaryInfo = -1; // according the status
+		intptr_t auxiliaryInfo = -1; // according the status - see getCurrentPosInLineInfo member function definition's above comment
 	};
 
 	ScintillaEditView **_ppEditView = nullptr;
@@ -230,6 +232,7 @@ public:
 	FindInFinderDlg() {
 		_options._isMatchCase = false;
 		_options._isWholeWord = false;
+		_options._isMatchLineNumber = true;
 	};
 
 private:
@@ -283,7 +286,9 @@ public :
 	void findAllIn(InWhat op);
 	void setSearchText(TCHAR * txt2find);
 
-	void gotoNextFoundResult(int direction = 0) {if (_pFinder) _pFinder->gotoNextFoundResult(direction);};
+	void gotoNextFoundResult(int direction = 0) const {
+		if (_pFinder) _pFinder->gotoNextFoundResult(direction);
+	};
 
 	void putFindResult(int result) {
 		_findAllResult = result;
@@ -336,8 +341,7 @@ public :
 
 	void finishFilesSearch(int count, int searchedCount, bool searchedEntireNotSelection)
 	{
-		const bool isMatchLines = false;
-		_pFinder->finishFilesSearch(count, searchedCount, isMatchLines, searchedEntireNotSelection);
+		_pFinder->finishFilesSearch(count, searchedCount, searchedEntireNotSelection, _env);
 	}
 
 	void focusOnFinder() {
@@ -387,15 +391,16 @@ public :
 
 	void execSavedCommand(int cmd, uptr_t intValue, const generic_string& stringValue);
 	void clearMarks(const FindOption& opt);
-	void setStatusbarMessage(const generic_string & msg, FindStatus staus, char const *pTooltipMsg = NULL);
+	void setStatusbarMessage(const std::wstring & msg, FindStatus staus, std::wstring tooltipMsg = L"");
 	void setStatusbarMessageWithRegExprErr(ScintillaEditView* pEditView);
 	generic_string getScopeInfoForStatusBar(FindOption const *pFindOpt) const;
 	Finder * createFinder();
 	bool removeFinder(Finder *finder2remove);
 	DIALOG_TYPE getCurrentStatus() {return _currentStatus;};
+	Finder* getFinderFrom(HWND hwnd);
 
 protected :
-	void resizeDialogElements(LONG newWidth);
+	void resizeDialogElements();
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	static WNDPROC originalFinderProc;
 	static WNDPROC originalComboEditProc;
@@ -405,28 +410,15 @@ protected :
 	// Window procedure for the finder
 	static LRESULT FAR PASCAL finderProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-    void combo2ExtendedMode(int comboID);
+	void combo2ExtendedMode(int comboID);
 
-private :
-	RECT _initialWindowRect = {};
-	LONG _deltaWidth = 0;
-	LONG _initialClientWidth = 0;
+private:
+	SIZE _szMinDialog{};
+	SIZE _szBorder{};
+
 	LONG _lesssModeHeight = 0;
 
 	DIALOG_TYPE _currentStatus = DIALOG_TYPE::FIND_DLG;
-	RECT _findClosePos = {};
-	RECT _replaceClosePos = {};
-	RECT _findInFilesClosePos = {};
-	RECT _markClosePos = {};
-
-	RECT _countInSelFramePos = {};
-	RECT _replaceInSelFramePos = {};
-
-	RECT _countInSelCheckPos = {};
-	RECT _replaceInSelCheckPos = {};
-
-	RECT _collapseButtonPos = {};
-	RECT _uncollapseButtonPos = {};
 
 	ScintillaEditView** _ppEditView = nullptr;
 	Finder  *_pFinder = nullptr;
@@ -456,17 +448,17 @@ private :
 	HICON _statusbarTooltipIcon = nullptr;
 	int _statusbarTooltipIconSize = 0;
 
-	HFONT _hMonospaceFont = nullptr;
+	HFONT _hComboBoxFont = nullptr;
 	HFONT _hLargerBolderFont = nullptr;
 	HFONT _hCourrierNewFont = nullptr;
 
 	std::map<int, bool> _controlEnableMap;
 
-	std::vector<int> _reduce2hide_find = { IDC_IN_SELECTION_CHECK, IDC_REPLACEINSELECTION, IDC_FINDALL_CURRENTFILE };
-	std::vector<int> _reduce2hide_findReplace = { IDC_IN_SELECTION_CHECK, IDC_REPLACEINSELECTION, IDREPLACEALL };
+	std::vector<int> _reduce2hide_find = { IDC_IN_SELECTION_CHECK, IDC_REPLACEINSELECTION, IDC_FINDALL_CURRENTFILE, IDCANCEL };
+	std::vector<int> _reduce2hide_findReplace = { IDC_IN_SELECTION_CHECK, IDC_REPLACEINSELECTION, IDREPLACEALL, IDCANCEL };
 	std::vector<int> _reduce2hide_fif = { IDD_FINDINFILES_FILTERS_STATIC, IDD_FINDINFILES_FILTERS_COMBO, IDCANCEL };
 	std::vector<int> _reduce2hide_fip = { IDD_FINDINFILES_FILTERS_STATIC, IDD_FINDINFILES_FILTERS_COMBO, IDCANCEL };
-	std::vector<int> _reduce2hide_mark = { IDC_MARKLINE_CHECK, IDC_PURGE_CHECK, IDC_IN_SELECTION_CHECK, IDC_COPY_MARKED_TEXT };
+	std::vector<int> _reduce2hide_mark = { IDC_MARKLINE_CHECK, IDC_PURGE_CHECK, IDC_IN_SELECTION_CHECK, IDC_COPY_MARKED_TEXT, IDCANCEL };
 
 	void enableFindDlgItem(int dlgItemID, bool isEnable = true);
 	void showFindDlgItem(int dlgItemID, bool isShow = true);
@@ -478,6 +470,7 @@ private :
 	void enableMarkAllControls(bool isEnable);
 	void enableMarkFunc();
 	void hideOrShowCtrl4reduceOrNormalMode(DIALOG_TYPE dlgT);
+	void calcAndSetCtrlsPos(DIALOG_TYPE dlgT, bool fromColBtn = false);
 
 	void setDefaultButton(int nID) {
 		SendMessage(_hSelf, DM_SETDEFID, nID, 0L);
@@ -496,7 +489,7 @@ private :
 	void updateCombos();
 	void updateCombo(int comboID);
 	void fillFindHistory();
-    void fillComboHistory(int id, const std::vector<generic_string> & strings);
+	void fillComboHistory(int id, const std::vector<generic_string> & strings);
 	int saveComboHistory(int id, int maxcount, std::vector<generic_string> & strings, bool saveEmpty);
 	static const int FR_OP_FIND = 1;
 	static const int FR_OP_REPLACE = 2;
@@ -605,4 +598,3 @@ private:
 	HWND _hBtn = nullptr;
 	HFONT _hFont = nullptr;
 };
-

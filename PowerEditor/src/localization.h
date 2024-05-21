@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <map>
 #include "Common.h"
 #include "tinyxmlA.h"
 
@@ -38,7 +39,6 @@ public:
 
 class NativeLangSpeaker {
 public:
-	NativeLangSpeaker():_nativeLangA(NULL), _nativeLangEncoding(CP_ACP), _isRTL(false), _fileName(NULL){};
 	void init(TiXmlDocumentA *nativeLangDocRootA, bool loadIfEnglish = false);
 	void changeConfigLang(HWND hDlg);
 	void changeLangTabContextMenu(HMENU hCM);
@@ -47,7 +47,7 @@ public:
 	void changeLangTabDropContextMenu(HMENU hCM);
 	void changeLangTrayIconContexMenu(HMENU hCM);
 	generic_string getSubMenuEntryName(const char *nodeName) const;
-	generic_string getNativeLangMenuString(int itemID) const;
+	generic_string getNativeLangMenuString(int itemID, generic_string inCaseOfFailureStr = L"", bool removeMarkAnd = false) const;
 	generic_string getShortcutNameString(int itemID) const;
 
 	void changeMenuLang(HMENU menuHandle);
@@ -63,6 +63,10 @@ public:
 
 	bool isRTL() const {
 		return _isRTL;
+	};
+
+	bool isEditZoneRTL() const {
+		return _isEditZoneRTL;
 	};
 
 	const char * getFileName() const {
@@ -83,13 +87,22 @@ public:
 	generic_string getAttrNameStr(const TCHAR *defaultStr, const char *nodeL1Name, const char *nodeL2Name, const char *nodeL3Name = "name") const;
 	generic_string getAttrNameByIdStr(const TCHAR *defaultStr, TiXmlNodeA *targetNode, const char *nodeL1Value, const char *nodeL1Name = "id", const char *nodeL2Name = "name") const;
 	generic_string getLocalizedStrFromID(const char *strID, const generic_string& defaultString) const;
+	void getMainMenuEntryName(std::wstring& dest, HMENU hMenu, const char* menuIdStr, const wchar_t* defaultDest);
+
+	void resetShortcutMenuNameMap() {
+		_shortcutMenuEntryNameMap.clear();
+	};
 
 	int messageBox(const char *msgBoxTagName, HWND hWnd, const TCHAR *message, const TCHAR *title, int msgBoxType, int intInfo = 0, const TCHAR *strInfo = NULL);
 private:
-	TiXmlNodeA *_nativeLangA;
-	int _nativeLangEncoding;
-	bool _isRTL;
-	const char *_fileName;
+	TiXmlNodeA *_nativeLangA = nullptr;
+	int _nativeLangEncoding = CP_ACP;
+	bool _isRTL = false; // for Notepad++ GUI
+	bool _isEditZoneRTL = false; // for Scitilla
+	const char *_fileName = nullptr;
+	std::map<std::string, std::wstring> _shortcutMenuEntryNameMap;
+
+	static void resizeCheckboxRadioBtn(HWND hWnd);
 };
 
 

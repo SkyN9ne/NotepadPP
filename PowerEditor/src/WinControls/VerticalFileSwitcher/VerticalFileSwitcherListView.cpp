@@ -149,17 +149,17 @@ void VerticalFileSwitcherListView::initList()
 		item.lParam = reinterpret_cast<LPARAM>(tl);
 		item.iGroupId = (fileNameStatus._iView == MAIN_VIEW) ? _groupID : _group2ID;
 		ListView_InsertItem(_hSelf, &item);
-		int colIndex = 0;
+		int colIndex2 = 0;
 		if (isExtColumn)
 		{
-			ListView_SetItemText(_hSelf, i, ++colIndex, ::PathFindExtension(fileNameStatus._fn.c_str()));
+			ListView_SetItemText(_hSelf, i, ++colIndex2, ::PathFindExtension(fileNameStatus._fn.c_str()));
 		}
 		if (isPathColumn)
 		{
 			TCHAR dir[MAX_PATH] = { '\0' }, drive[MAX_PATH] = { '\0' };
 			_wsplitpath_s(fileNameStatus._fn.c_str(), drive, MAX_PATH, dir, MAX_PATH, NULL, 0, NULL, 0);
 			wcscat_s(drive, dir);
-			ListView_SetItemText(_hSelf, i, ++colIndex, drive);
+			ListView_SetItemText(_hSelf, i, ++colIndex2, drive);
 		}
 	}
 	_currentIndex = taskListInfo._currentIndex;
@@ -169,12 +169,23 @@ void VerticalFileSwitcherListView::initList()
 
 void VerticalFileSwitcherListView::reload()
 {
+	// Suppress redraws for performance. We target _hParent to prevent scroll bar flickering.
+	::SendMessage(_hParent, WM_SETREDRAW, false, 0);
 	removeAll();
 	initList();
 
 	RECT rc{};
 	::GetClientRect(_hParent, &rc);
 	resizeColumns(rc.right - rc.left);
+	::SendMessage(_hParent, WM_SETREDRAW, true, 0);
+	redrawItems();
+}
+
+void VerticalFileSwitcherListView::redrawItems()
+{
+	int nbItem = ListView_GetItemCount(_hSelf);
+	::SendMessage(_hSelf, WM_PAINT, 0, 0);
+	ListView_RedrawItems(_hSelf, 0, nbItem - 1);
 }
 
 BufferID VerticalFileSwitcherListView::getBufferInfoFromIndex(int index, int & view) const
@@ -283,7 +294,7 @@ generic_string VerticalFileSwitcherListView::getFullFilePath(size_t i) const
 	item.mask = LVIF_PARAM;
 	item.iItem = static_cast<int32_t>(i);
 	ListView_GetItem(_hSelf, &item);
-	TaskLstFnStatus *tlfs = (TaskLstFnStatus *)item.lParam;
+	const TaskLstFnStatus *tlfs = (TaskLstFnStatus *)item.lParam;
 
 	return tlfs->_fn;
 }
@@ -298,6 +309,9 @@ int VerticalFileSwitcherListView::closeItem(BufferID bufferID, int iView)
 
 void VerticalFileSwitcherListView::activateItem(BufferID bufferID, int iView)
 {
+	// Suppress redraws while we're resetting states
+	::SendMessage(_hSelf, WM_SETREDRAW, false, 0);
+
 	// Clean all selection
 	int nbItem = ListView_GetItemCount(_hSelf);
 	for (int i = 0; i < nbItem; ++i)
@@ -305,7 +319,10 @@ void VerticalFileSwitcherListView::activateItem(BufferID bufferID, int iView)
 
 	_currentIndex = newItem(bufferID, iView);
 	selectCurrentItem();
+	// Have to enable redraw to be able to move selection to the current item
+	::SendMessage(_hSelf, WM_SETREDRAW, true, 0);
 	ensureVisibleCurrentItem();
+	redrawItems();
 }
 
 int VerticalFileSwitcherListView::add(BufferID bufferID, int iView)
@@ -313,7 +330,7 @@ int VerticalFileSwitcherListView::add(BufferID bufferID, int iView)
 	_currentIndex = ListView_GetItemCount(_hSelf);
 	Buffer *buf = bufferID;
 	const TCHAR *fileName = buf->getFileName();
-	NppGUI& nppGUI = NppParameters::getInstance().getNppGUI();
+	const NppGUI& nppGUI = NppParameters::getInstance().getNppGUI();
 	TaskLstFnStatus *tl = new TaskLstFnStatus(iView, 0, buf->getFullPathName(), 0, (void *)bufferID, -1);
 
 	TCHAR fn[MAX_PATH] = { '\0' };
@@ -352,7 +369,7 @@ int VerticalFileSwitcherListView::add(BufferID bufferID, int iView)
 }
 
 
-void VerticalFileSwitcherListView::remove(int index)
+void VerticalFileSwitcherListView::remove(int index, bool removeFromListview)
 {
 	LVITEM item{};
 	item.mask = LVIF_PARAM;
@@ -360,7 +377,9 @@ void VerticalFileSwitcherListView::remove(int index)
 	ListView_GetItem(_hSelf, &item);
 	TaskLstFnStatus *tlfs = (TaskLstFnStatus *)item.lParam;
 	delete tlfs;
-	ListView_DeleteItem(_hSelf, index);
+	
+	if (removeFromListview)
+		ListView_DeleteItem(_hSelf, index);
 }
 
 void VerticalFileSwitcherListView::removeAll()
@@ -369,8 +388,9 @@ void VerticalFileSwitcherListView::removeAll()
 	
 	for (int i = nbItem - 1; i >= 0 ; --i)
 	{
-		remove(i);
+		remove(i, false);
 	}
+	ListView_DeleteAllItems(_hSelf);
 
 	HWND colHeader = reinterpret_cast<HWND>(SendMessage(_hSelf, LVM_GETHEADER, 0, 0));
 	int columnCount = static_cast<int32_t>(SendMessage(colHeader, HDM_GETITEMCOUNT, 0, 0));
@@ -392,7 +412,7 @@ int VerticalFileSwitcherListView::find(BufferID bufferID, int iView) const
 		item.mask = LVIF_PARAM;
 		item.iItem = i;
 		ListView_GetItem(_hSelf, &item);
-		TaskLstFnStatus *tlfs = (TaskLstFnStatus *)item.lParam;
+		const TaskLstFnStatus *tlfs = (TaskLstFnStatus *)item.lParam;
 		if (tlfs->_bufID == bufferID && tlfs->_iView == iView)
 		{
 			found =  true;

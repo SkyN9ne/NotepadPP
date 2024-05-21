@@ -27,7 +27,7 @@ enum GridState {STATE_MENU, STATE_MACRO, STATE_USER, STATE_PLUGIN, STATE_SCINTIL
 class ShortcutMapper : public StaticDialog {
 public:
 	ShortcutMapper() : StaticDialog(), _currentState(STATE_MENU) {
-		_shortcutFilter = TEXT("");
+		_shortcutFilter = std::vector<generic_string>();
 		_dialogInitDone = false;
 	};
 	~ShortcutMapper() = default;
@@ -37,7 +37,7 @@ public:
         _currentState = initState;
     };
 
-	void destroy() {};
+	void destroy() override {};
 	void doDialog(bool isRTL = false) {
 		if (isRTL)
 		{
@@ -49,7 +49,7 @@ public:
 		else
 			::DialogBoxParam(_hInst, MAKEINTRESOURCE(IDD_SHORTCUTMAPPER_DLG), _hParent, dlgProc, reinterpret_cast<LPARAM>(this));
 	};
-	void getClientRect(RECT & rc) const;
+	void getClientRect(RECT & rc) const override;
 
 	bool findKeyConflicts(__inout_opt generic_string * const keyConflictLocation,
 							const KeyCombo & itemKeyCombo, const size_t & itemIndex) const;
@@ -57,9 +57,10 @@ public:
 	generic_string getTextFromCombo(HWND hCombo);
 	bool isFilterValid(Shortcut);
 	bool isFilterValid(PluginCmdShortcut sc);
+	bool isFilterValid(ScintillaKeyMap sc);
 
 protected :
-	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 
 private:
 	BabyGridWrapper _babygrid;
@@ -70,7 +71,7 @@ private:
 
 	const static int _nbTab = 5;
 	generic_string _tabNames[_nbTab];
-	generic_string _shortcutFilter;
+	std::vector<generic_string> _shortcutFilter;
 	std::vector<size_t> _shortcutIndex;
 
 	//save/restore the last view

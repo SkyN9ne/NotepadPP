@@ -16,17 +16,9 @@
 
 #include <locale>
 #include <codecvt>
+#include <shlwapi.h>
 #include "FileInterface.h"
 #include "Parameters.h"
-
-Win32_IO_File::Win32_IO_File(const char *fname)
-{
-	if (fname)
-	{
-		_path = fname;
-		_hFile = ::CreateFileA(fname, _accessParam, _shareParam, NULL, _dispParam, _attribParam, NULL);
-	}
-}
 
 
 Win32_IO_File::Win32_IO_File(const wchar_t *fname)
@@ -36,7 +28,42 @@ Win32_IO_File::Win32_IO_File(const wchar_t *fname)
 		std::wstring fn = fname;
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 		_path = converter.to_bytes(fn);
-		_hFile = ::CreateFileW(fname, _accessParam, _shareParam, NULL, _dispParam, _attribParam, NULL);
+
+		WIN32_FILE_ATTRIBUTE_DATA attributes_original{};
+		DWORD dispParam = CREATE_ALWAYS;
+		BOOL doesFileExist = ::PathFileExistsW(fname);
+		if (doesFileExist)
+		{
+			// Store the file creation date & attributes for a possible use later...
+			::GetFileAttributesExW(fname, GetFileExInfoStandard, &attributes_original);
+
+			// Check the existence of Alternate Data Streams
+			WIN32_FIND_STREAM_DATA findData;
+			HANDLE hFind = FindFirstStreamW(fname, FindStreamInfoStandard, &findData, 0);
+			if (hFind != INVALID_HANDLE_VALUE) // Alternate Data Streams found
+			{
+				dispParam = TRUNCATE_EXISTING;
+				FindClose(hFind);
+			}
+		}
+
+		_hFile = ::CreateFileW(fname, _accessParam, _shareParam, NULL, dispParam, _attribParam, NULL);
+
+		// Race condition management:
+		//  If file didn't exist while calling PathFileExistsW, but before calling CreateFileW, file is created:  use CREATE_ALWAYS is OK
+		//  If file did exist while calling PathFileExistsW, but before calling CreateFileW, file is deleted:  use TRUNCATE_EXISTING will cause the error
+		if (dispParam == TRUNCATE_EXISTING && _hFile == INVALID_HANDLE_VALUE && ::GetLastError() == ERROR_FILE_NOT_FOUND)
+		{
+			dispParam = CREATE_ALWAYS;
+			_hFile = ::CreateFileW(fname, _accessParam, _shareParam, NULL, dispParam, _attribParam, NULL);
+		}
+
+		if (doesFileExist && (dispParam == CREATE_ALWAYS) && (_hFile != INVALID_HANDLE_VALUE))
+		{
+			// restore back the original creation date & attributes
+			::SetFileTime(_hFile, &(attributes_original.ftCreationTime), NULL, NULL);
+			::SetFileAttributesW(fname, (_attribParam | attributes_original.dwFileAttributes));
+		}
 
 		NppParameters& nppParam = NppParameters::getInstance();
 		if (nppParam.isEndSessionStarted() && nppParam.doNppLogNulContentCorruptionIssue())
@@ -65,18 +92,69 @@ void Win32_IO_File::close()
 {
 	if (isOpened())
 	{
+		NppParameters& nppParam = NppParameters::getInstance();
+
 		DWORD flushError = NOERROR;
 		if (_written)
 		{
 			if (!::FlushFileBuffers(_hFile))
+			{
 				flushError = ::GetLastError();
+				std::wstring errNumberMsg = std::to_wstring(flushError) + L" - " + GetLastErrorAsString(flushError);
+
+				if (!nppParam.isEndSessionCritical())
+				{
+					// because of there is not an externally forced shutdown/restart of Windows in progress,
+					// we can at least alert the user that the file data could not actually be saved
+
+					std::wstring curFilePath;
+					const DWORD cchPathBuf = MAX_PATH + 128;
+					WCHAR pathbuf[cchPathBuf]{};
+					// the dwFlags used below are the most error-proof and informative
+					DWORD dwRet = ::GetFinalPathNameByHandle(_hFile, pathbuf, cchPathBuf, FILE_NAME_OPENED | VOLUME_NAME_NT);
+					if ((dwRet == 0) || (dwRet >= cchPathBuf))
+					{
+						// probably insufficient path-buffer length, the classic style must suffice
+						std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+						curFilePath = converter.from_bytes(_path);
+					}
+					else
+					{
+						// ok
+						// - the chosen file path style here will allow us to also see the MS MUP (multiple UNC provider) style path
+						//   for a possible network drive mapped here as the usual disk-letter, e.g.:
+						//     "\Device\Mup\NETWORK_SERVER_DNS_NAME_OR_IP\SERVER_PATH\FILENAME" 
+						//     "\Device\Mup\NETWORK_SERVER_DNS_NAME_OR_IP@SSL@PORT_NUMBER\DavWWWRoot\SERVER_PATH\FILENAME"
+						// - classic local disk will be visible here like: "\Device\HarddiskVolume2\ABSOLUTE_PATH_WITHOUT_DRIVENAME\FILENAME"
+						curFilePath = pathbuf;
+					}
+
+					std::wstring errMsg = L"Notepad++ has encountered a serious system problem while saving:\n\n";
+					errMsg += curFilePath;
+					errMsg += L"\n\nThat file, temporarily stored in the system cache, cannot be finally committed to the storage device selected! \
+This is probably a storage driver or hardware issue, beyond the control of the Notepad++. \
+Please try using another storage and also check if your saved data is not corrupted.\n\nError Code reported: ";
+					errMsg += errNumberMsg;
+					::MessageBoxW(NULL, errMsg.c_str(), L"WARNING - filebuffer flushing fail!", MB_OK | MB_ICONWARNING | MB_SYSTEMMODAL);
+				}
+				else
+				{
+					// writing breif log here
+					std::wstring nppFlushFileBuffersFailsLog = L"nppFlushFileBuffersFails.log";
+					std::wstring nppIssueLog = nppParam.getUserPath();
+					pathAppend(nppIssueLog, nppFlushFileBuffersFailsLog);
+
+					std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+					std::string errNumberMsgA = converter.to_bytes(errNumberMsg);
+
+					writeLog(nppIssueLog.c_str(), errNumberMsgA.c_str());
+				}
+			}
 		}
 		::CloseHandle(_hFile);
 
 		_hFile = INVALID_HANDLE_VALUE;
 
-
-		NppParameters& nppParam = NppParameters::getInstance();
 		if (nppParam.isEndSessionStarted() && nppParam.doNppLogNulContentCorruptionIssue())
 		{
 			generic_string issueFn = nppLogNulContentCorruptionIssue;
@@ -84,10 +162,11 @@ void Win32_IO_File::close()
 			generic_string nppIssueLog = nppParam.getUserPath();
 			pathAppend(nppIssueLog, issueFn);
 
-
 			std::string msg;
 			if (flushError != NOERROR)
 			{
+				msg = "FlushFileBuffers failed with the error code: " + std::to_string(flushError) + " - ";
+
 				LPSTR messageBuffer = nullptr;
 				FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 					nullptr, flushError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, nullptr);
@@ -104,31 +183,6 @@ void Win32_IO_File::close()
 	}
 }
 
-/*
-int_fast64_t Win32_IO_File::getSize()
-{
-	LARGE_INTEGER r;
-	r.QuadPart = -1;
-
-	if (isOpened())
-		::GetFileSizeEx(_hFile, &r);
-
-	return static_cast<int_fast64_t>(r.QuadPart);
-}
-
-unsigned long Win32_IO_File::read(void *rbuf, unsigned long buf_size)
-{
-	if (!isOpened() || (rbuf == nullptr) || (buf_size == 0))
-		return 0;
-
-	DWORD bytes_read = 0;
-
-	if (::ReadFile(_hFile, rbuf, buf_size, &bytes_read, NULL) == FALSE)
-		return 0;
-
-	return bytes_read;
-}
-*/
 
 bool Win32_IO_File::write(const void *wbuf, size_t buf_size)
 {

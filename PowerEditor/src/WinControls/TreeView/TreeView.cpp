@@ -87,7 +87,7 @@ LRESULT TreeView::runProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 				nmtv.hdr.code = TVN_ITEMEXPANDED;
 				nmtv.hdr.hwndFrom = _hSelf;
 				nmtv.hdr.idFrom = 0;
-				nmtv.action = wParam & TVE_COLLAPSE ? TVE_COLLAPSE : TVE_EXPAND;
+				nmtv.action = (wParam & TVE_COLLAPSE) ? TVE_COLLAPSE : TVE_EXPAND;
 				nmtv.itemNew.hItem = tvItem.hItem;
 				::SendMessage(_hParent, WM_NOTIFY, nmtv.hdr.idFrom, reinterpret_cast<LPARAM>(&nmtv));
 			}
@@ -285,7 +285,10 @@ BOOL TreeView::setImageList(int w, int h, int nbImage, int image_id, ...)
 
 		hbmp = (HBITMAP)::LoadImage(_hInst, MAKEINTRESOURCE(imageID), IMAGE_BITMAP, bmDpiDynW, bmDpiDynH, 0);
 		if (hbmp == NULL)
+		{
+			va_end(argLst);
 			return FALSE;
+		}
 		ImageList_AddMasked(_hImaLst, hbmp, maskColour);
 		DeleteObject(hbmp);
 	}
@@ -657,14 +660,12 @@ bool TreeView::searchLeafRecusivelyAndBuildTree(HTREEITEM tree2Build, const gene
 		}
 	}
 
-	size_t i = 0;
 	bool isOk = true;
 	for (HTREEITEM hItem = getChildFrom(tree2Search); hItem != NULL; hItem = getNextSibling(hItem))
 	{
 		isOk = searchLeafRecusivelyAndBuildTree(tree2Build, text2Search, index2Search, hItem);
 		if (!isOk)
 			break;
-		++i;
 	}
 	return isOk;
 }

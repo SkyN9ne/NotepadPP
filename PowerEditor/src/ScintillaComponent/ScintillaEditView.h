@@ -422,11 +422,6 @@ public:
 
     static UserDefineDialog * getUserDefineDlg() {return &_userDefineDlg;};
 
-    void setCaretColorWidth(int color, int width = 1) const {
-        execute(SCI_SETCARETFORE, color);
-        execute(SCI_SETCARETWIDTH, width);
-    };
-
 	void beSwitched() {
 		_userDefineDlg.setScintilla(this);
 	};
@@ -717,6 +712,8 @@ public:
 	void notifyMarkers(Buffer * buf, bool isHide, size_t location, bool del);
 	void runMarkers(bool doHide, size_t searchStart, bool endOfDoc, bool doDelete);
 
+	bool hasSelection() const { return !execute(SCI_GETSELECTIONEMPTY); };
+
 	bool isSelecting() const {
 		static Sci_CharacterRangeFull previousSelRange = getSelection();
 		Sci_CharacterRangeFull currentSelRange = getSelection();
@@ -766,7 +763,7 @@ public:
 			    (_codepage == CP_JAPANESE) || (_codepage == CP_KOREAN));
 	};
 	void scrollPosToCenter(size_t pos);
-	generic_string getEOLString();
+	generic_string getEOLString() const;
 	void setBorderEdge(bool doWithBorderEdge);
 	void sortLines(size_t fromLine, size_t toLine, ISorter *pSort);
 	void changeTextDirection(bool isRTL);
@@ -774,6 +771,9 @@ public:
 	void setPositionRestoreNeeded(bool val) { _positionRestoreNeeded = val; };
 	void markedTextToClipboard(int indiStyle, bool doAll = false);
 	void removeAnyDuplicateLines();
+	bool expandWordSelection();
+	bool pasteToMultiSelection() const;
+	void setElementColour(int element, COLORREF color) const { execute(SCI_SETELEMENTCOLOUR, element, color | 0xFF000000); };
 
 protected:
 	static bool _SciInit;
@@ -808,8 +808,8 @@ protected:
 	BufferStyleMap _hotspotStyles;
 
 	intptr_t _beginSelectPosition = -1;
-
 	static std::string _defaultCharList;
+	bool _isMultiPasteActive = false;
 
 //Lexers and Styling
 	void restyleBuffer();
@@ -827,6 +827,7 @@ protected:
 	//Complex lexers (same lexer, different language)
 	void setXmlLexer(LangType type);
  	void setCppLexer(LangType type);
+	void setHTMLLexer();
 	void setJsLexer();
 	void setTclLexer();
     void setObjCLexer(LangType type);
@@ -844,7 +845,7 @@ protected:
 	};
 
 	void setLuaLexer() {
-		setLexer(L_LUA, LIST_0 | LIST_1 | LIST_2 | LIST_3);
+		setLexer(L_LUA, LIST_0 | LIST_1 | LIST_2 | LIST_3 | LIST_4 | LIST_5 | LIST_6 | LIST_7);
 	};
 
 	void setMakefileLexer() {
@@ -887,6 +888,8 @@ protected:
 	void setPythonLexer() {
 		setLexer(L_PYTHON, LIST_0 | LIST_1);
 		execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.quotes.python"), reinterpret_cast<LPARAM>("1"));
+		execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("lexer.python.decorator.attributes"), reinterpret_cast<LPARAM>("1"));
+		execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("lexer.python.identifier.attributes"), reinterpret_cast<LPARAM>("1"));
 	};
 	
 	void setGDScriptLexer() {
@@ -1132,6 +1135,12 @@ protected:
 		setLexer(L_HOLLYWOOD, LIST_0 | LIST_1 | LIST_2 | LIST_3);
 	};	
 
+	void setRakuLexer(){
+		setLexer(L_RAKU, LIST_0 | LIST_1 | LIST_2 | LIST_3 | LIST_4 | LIST_5 | LIST_6);
+		execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.raku.comment.multiline"), reinterpret_cast<LPARAM>("1"));
+		execute(SCI_SETPROPERTY, reinterpret_cast<WPARAM>("fold.raku.comment.pod"), reinterpret_cast<LPARAM>("1"));
+	};
+
     //--------------------
 
 	void setSearchResultLexer() {
@@ -1183,7 +1192,6 @@ protected:
 	};
 
 	std::pair<size_t, size_t> getWordRange();
-	bool expandWordSelection();
 	void getFoldColor(COLORREF& fgColor, COLORREF& bgColor, COLORREF& activeFgColor);
 };
 

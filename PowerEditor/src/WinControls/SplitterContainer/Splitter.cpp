@@ -424,7 +424,7 @@ LRESULT CALLBACK Splitter::spliterWndProc(UINT uMsg, WPARAM wParam, LPARAM lPara
 
 void Splitter::resizeSpliter(RECT *pRect)
 {
-	RECT rect;
+	RECT rect{};
 
 	if (pRect)
 		rect = *pRect;
@@ -721,7 +721,7 @@ void Splitter::adjustZoneToDraw(RECT& rc2def, ZONE_TYPE whichZone)
 
 	int x0, y0, x1, y1, w, h;
 
-	if ((4 <= _splitterSize) && (_splitterSize <= 8))
+	if (/*(4 <= _splitterSize) && */(_splitterSize <= 8))
 	{
 		w = (isVertical() ? 4 : 7);
 		h = (isVertical() ? 7 : 4);

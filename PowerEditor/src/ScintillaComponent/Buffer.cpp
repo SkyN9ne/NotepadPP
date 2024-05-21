@@ -86,6 +86,9 @@ Buffer::Buffer(FileManager * pManager, BufferID id, Document doc, DocFileStatus 
 
 	// reset after initialization
 	_canNotify = true;
+
+	if (nppParamInst.getNativeLangSpeaker()->isRTL() && nppParamInst.getNativeLangSpeaker()->isEditZoneRTL())
+		_isRTL = true;
 }
 
 
@@ -136,7 +139,7 @@ void Buffer::setLangType(LangType lang, const TCHAR* userLangName)
 
 void Buffer::updateTimeStamp()
 {
-	FILETIME timeStampLive = {};
+	FILETIME timeStampLive {};
 	WIN32_FILE_ATTRIBUTE_DATA attributes{};
 	if (GetFileAttributesEx(_fullPathName.c_str(), GetFileExInfoStandard, &attributes) != 0)
 	{
@@ -212,17 +215,17 @@ void Buffer::setFileName(const TCHAR *fn)
 		}
 	}
 
-	if (determinatedLang == L_TEXT)	//language can probably be refined
+	if (determinatedLang == L_TEXT)	// language can probably be refined
 	{
-		if ((OrdinalIgnoreCaseCompareStrings(_fileName, TEXT("makefile")) == 0) || (OrdinalIgnoreCaseCompareStrings(_fileName, TEXT("GNUmakefile")) == 0))
+		if ((wcsicmp(_fileName, TEXT("makefile")) == 0) || (wcsicmp(_fileName, TEXT("GNUmakefile")) == 0))
 			determinatedLang = L_MAKEFILE;
-		else if (OrdinalIgnoreCaseCompareStrings(_fileName, TEXT("CmakeLists.txt")) == 0)
+		else if (wcsicmp(_fileName, TEXT("CmakeLists.txt")) == 0)
 			determinatedLang = L_CMAKE;
-		else if ((OrdinalIgnoreCaseCompareStrings(_fileName, TEXT("SConstruct")) == 0) || (OrdinalIgnoreCaseCompareStrings(_fileName, TEXT("SConscript")) == 0) || (OrdinalIgnoreCaseCompareStrings(_fileName, TEXT("wscript")) == 0))
+		else if ((wcsicmp(_fileName, TEXT("SConstruct")) == 0) || (wcsicmp(_fileName, TEXT("SConscript")) == 0) || (wcsicmp(_fileName, TEXT("wscript")) == 0))
 			determinatedLang = L_PYTHON;
-		else if ((OrdinalIgnoreCaseCompareStrings(_fileName, TEXT("Rakefile")) == 0) || (OrdinalIgnoreCaseCompareStrings(_fileName, TEXT("Vagrantfile")) == 0))
+		else if ((wcsicmp(_fileName, TEXT("Rakefile")) == 0) || (wcsicmp(_fileName, TEXT("Vagrantfile")) == 0))
 			determinatedLang = L_RUBY;
-		else if ((OrdinalIgnoreCaseCompareStrings(_fileName, TEXT("crontab")) == 0) || (OrdinalIgnoreCaseCompareStrings(_fileName, TEXT("PKGBUILD")) == 0) || (OrdinalIgnoreCaseCompareStrings(_fileName, TEXT("APKBUILD")) == 0))
+		else if ((wcsicmp(_fileName, TEXT("crontab")) == 0) || (wcsicmp(_fileName, TEXT("PKGBUILD")) == 0) || (wcsicmp(_fileName, TEXT("APKBUILD")) == 0))
 			determinatedLang = L_BASH;
 	}
 
@@ -265,7 +268,17 @@ bool Buffer::checkFileState() // returns true if the status has been changed (it
 	}
 
 	bool isOK = false;
-	if (_currentStatus != DOC_DELETED && !PathFileExists(_fullPathName.c_str()))	//document has been deleted
+	if (_currentStatus == DOC_INACCESSIBLE && !PathFileExists(_fullPathName.c_str()))	//document is absent on its first load - we set readonly and not dirty, and make it be as document which has been deleted
+	{
+		_currentStatus = DOC_DELETED;//DOC_INACCESSIBLE;
+		_isInaccessible = true;
+		_isFileReadOnly = true;
+		_isDirty = false;
+		_timeStamp = {};
+		doNotify(BufferChangeStatus | BufferChangeReadonly | BufferChangeTimestamp);
+		isOK = true;
+	}
+	else if (_currentStatus != DOC_DELETED && !PathFileExists(_fullPathName.c_str()))	//document has been deleted
 	{
 		_currentStatus = DOC_DELETED;
 		_isFileReadOnly = false;
@@ -715,8 +728,9 @@ BufferID FileManager::loadFile(const TCHAR* filename, Document doc, int encoding
 	bool ownDoc = false;
 	if (!doc)
 	{
-		// If file exceeds 200MB, activate large file mode
-		doc = (Document)_pscratchTilla->execute(SCI_CREATEDOCUMENT, 0, isLargeFile ? SC_DOCUMENTOPTION_STYLES_NONE | SC_DOCUMENTOPTION_TEXT_LARGE : 0);
+		// if file exceeds the _largeFileSizeDefInByte, disable the Scintilla styling (results in half memory consumption)
+		doc = static_cast<Document>(_pscratchTilla->execute(SCI_CREATEDOCUMENT, 0,
+			isLargeFile ? SC_DOCUMENTOPTION_STYLES_NONE | SC_DOCUMENTOPTION_TEXT_LARGE : SC_DOCUMENTOPTION_TEXT_LARGE));
 		ownDoc = true;
 	}
 
@@ -1015,7 +1029,7 @@ bool FileManager::backupCurrentBuffer()
 				hasModifForSession = true;
 			}
 
-			TCHAR fullpath[MAX_PATH];
+			TCHAR fullpath[MAX_PATH]{};
 			::GetFullPathName(backupFilePath.c_str(), MAX_PATH, fullpath, NULL);
 			if (wcschr(fullpath, '~'))
 			{
@@ -1025,8 +1039,9 @@ bool FileManager::backupCurrentBuffer()
 			// Make sure the backup file is not read only
 			removeReadOnlyFlagFromFileAttributes(fullpath);
 
-
-			if (UnicodeConvertor.openFile(fullpath))
+			std::wstring fullpathTemp = fullpath;
+			fullpathTemp += L".tmp";
+			if (UnicodeConvertor.openFile(buffer->isUntitled() ? fullpathTemp.c_str() : fullpath)) // Use temp only for "new #" due to they don't have the original physical existance on the hard drive
 			{
 				size_t lengthDoc = _pNotepadPlus->_pEditView->getCurrentDocLen();
 				char* buf = (char*)_pNotepadPlus->_pEditView->execute(SCI_GETCHARACTERPOINTER);	//to get characters directly from Scintilla buffer
@@ -1041,7 +1056,7 @@ bool FileManager::backupCurrentBuffer()
 				else
 				{
 					WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
-					size_t grabSize;
+					size_t grabSize = 0;
 					for (size_t i = 0; i < lengthDoc; i += grabSize)
 					{
 						grabSize = lengthDoc - i;
@@ -1061,6 +1076,14 @@ bool FileManager::backupCurrentBuffer()
 
 				if (isWrittenSuccessful) // backup file has been saved
 				{
+					if (buffer->isUntitled()) // "new #" file is saved successfully, then we replace its only physical existence by its temp
+					{
+						if (::PathFileExists(fullpath))
+							::ReplaceFile(fullpath, fullpathTemp.c_str(), nullptr, REPLACEFILE_IGNORE_MERGE_ERRORS | REPLACEFILE_IGNORE_ACL_ERRORS, 0, 0);
+						else
+							::MoveFileEx(fullpathTemp.c_str(), fullpath, MOVEFILE_REPLACE_EXISTING);
+					}
+
 					buffer->setModifiedStatus(false);
 					result = true;	//all done
 				}
@@ -1114,7 +1137,7 @@ bool FileManager::deleteBufferBackup(BufferID id)
 
 std::mutex save_mutex;
 
-SavingStatus FileManager::saveBuffer(BufferID id, const TCHAR * filename, bool isCopy)
+SavingStatus FileManager::saveBuffer(BufferID id, const TCHAR* filename, bool isCopy)
 {
 	std::lock_guard<std::mutex> lock(save_mutex);
 
@@ -1135,6 +1158,28 @@ SavingStatus FileManager::saveBuffer(BufferID id, const TCHAR * filename, bool i
 		{
 			::GetLongPathName(fullpath, fullpath, MAX_PATH);
 		}
+	}
+	
+	wchar_t dirDest[MAX_PATH];
+	wcscpy_s(dirDest, MAX_PATH, fullpath);
+	::PathRemoveFileSpecW(dirDest);
+
+	const wchar_t* currentBufFilePath = buffer->getFullPathName();
+	ULARGE_INTEGER freeBytesForUser;
+	 
+	BOOL getFreeSpaceRes = ::GetDiskFreeSpaceExW(dirDest, &freeBytesForUser, nullptr, nullptr);
+	if (getFreeSpaceRes != FALSE)
+	{
+		int64_t fileSize = buffer->getFileLength();
+		if (fileSize >= 0 && lstrcmp(fullpath, currentBufFilePath) == 0) // if file to save does exist, and it's an operation "Save" but not "Save As"
+		{
+			// if file exists and the operation "Save" but not "Save As", its current length should be considered as part of free room space since the file itself will be overrrided 
+			freeBytesForUser.QuadPart += fileSize;
+		}
+
+		// determinate if free space is enough
+		if (freeBytesForUser.QuadPart < buffer->docLength())
+			return SavingStatus::NotEnoughRoom;
 	}
 
 	if (PathFileExists(fullpath))
@@ -1174,14 +1219,14 @@ SavingStatus FileManager::saveBuffer(BufferID id, const TCHAR * filename, bool i
 		}
 		else
 		{
-			WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
 			if (lengthDoc == 0)
 			{
 				isWrittenSuccessful = UnicodeConvertor.writeFile(buf, 0);
 			}
 			else
 			{
-				size_t grabSize;
+				WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
+				size_t grabSize = 0;
 				for (size_t i = 0; i < lengthDoc; i += grabSize)
 				{
 					grabSize = lengthDoc - i;
@@ -1209,10 +1254,10 @@ SavingStatus FileManager::saveBuffer(BufferID id, const TCHAR * filename, bool i
 		if (isHiddenOrSys)
 			::SetFileAttributes(fullpath, attrib);
 
-		if (isCopy) // Save As command
+		if (isCopy) // "Save a Copy As..." command
 		{
 			_pscratchTilla->execute(SCI_SETDOCPOINTER, 0, _scratchDocDefault);
-			return SavingStatus::SaveOK;	//all done
+			return SavingStatus::SaveOK;	//all done - we don't change the current buffer's path to "fullpath", since it's "Save a Copy As..." action.
 		}
 
 		buffer->setFileName(fullpath);
@@ -1310,7 +1355,7 @@ BufferID FileManager::newEmptyDocument()
 	wsprintf(nb, TEXT("%d"), static_cast<int>(nextUntitledNewNumber()));
 	newTitle += nb;
 
-	Document doc = (Document)_pscratchTilla->execute(SCI_CREATEDOCUMENT);	//this already sets a reference for filemanager
+	Document doc = static_cast<Document>(_pscratchTilla->execute(SCI_CREATEDOCUMENT, 0, SC_DOCUMENTOPTION_TEXT_LARGE)); // this already sets a reference for filemanager
 	Buffer* newBuf = new Buffer(this, _nextBufferID, doc, DOC_UNNAMED, newTitle.c_str(), false);
 
 	NppParameters& nppParamInst = NppParameters::getInstance();
@@ -1323,6 +1368,48 @@ BufferID FileManager::newEmptyDocument()
 	++_nbBufs;
 	++_nextBufferID;
 	return id;
+}
+
+BufferID FileManager::newPlaceholderDocument(const TCHAR* missingFilename, int whichOne, const wchar_t* userCreatedSessionName)
+{
+	NppParameters& nppParamInst = NppParameters::getInstance();
+
+	if (!nppParamInst.theWarningHasBeenGiven())
+	{
+		int res = 0;
+		if (userCreatedSessionName)
+		{
+			res = (nppParamInst.getNativeLangSpeaker())->messageBox(
+				"FileInaccessibleUserSession",
+				_pNotepadPlus->_pEditView->getHSelf(),
+				L"Some files from your manually-saved session \"$STR_REPLACE$\" are inaccessible. They can be opened as empty and read-only documents as placeholders.\n\nWould you like to create those placeholders?\n\nNOTE: Choosing not to create the placeholders or closing them later, your manually-saved session will NOT be modified on exit.",
+				L"File inaccessible",
+				MB_YESNO | MB_APPLMODAL,
+				0,
+				userCreatedSessionName);
+		}
+		else
+		{
+			res = (nppParamInst.getNativeLangSpeaker())->messageBox(
+				"FileInaccessibleDefaultSessionXml",
+				_pNotepadPlus->_pEditView->getHSelf(),
+				L"Some files from your past session are inaccessible. They can be opened as empty and read-only documents as placeholders.\n\nWould you like to create those placeholders?\n\nNOTE: Choosing not to create the placeholders or closing them later, your session WILL BE MODIFIED ON EXIT! We suggest you backup your \"session.xml\" now.",
+				L"File inaccessible",
+				MB_YESNO | MB_APPLMODAL);
+		}
+
+		nppParamInst.setTheWarningHasBeenGiven(true);
+		nppParamInst.setPlaceHolderEnable(res == IDYES);
+	}
+
+	if (!nppParamInst.isPlaceHolderEnabled())
+		return BUFFER_INVALID;
+
+	BufferID buf = MainFileManager.newEmptyDocument();
+	_pNotepadPlus->loadBufferIntoView(buf, whichOne);
+	buf->setFileName(missingFilename);
+	buf->_currentStatus = DOC_INACCESSIBLE;
+	return buf;
 }
 
 BufferID FileManager::bufferFromDocument(Document doc, bool isMainEditZone)
@@ -1517,6 +1604,7 @@ bool FileManager::loadFileData(Document doc, int64_t fileSize, const TCHAR * fil
 		_pscratchTilla->execute(SCI_SETREADONLY, false);
 	}
 	_pscratchTilla->execute(SCI_CLEARALL);
+	_pscratchTilla->execute(SCI_SETUNDOCOLLECTION, false); // disable undocollection while loading a file
 
 
 	if (fileFormat._language < L_EXTERNAL)
@@ -1644,10 +1732,10 @@ bool FileManager::loadFileData(Document doc, int64_t fileSize, const TCHAR * fil
 				break;
 			case SC_STATUS_BADALLOC:
 			{
-				pNativeSpeaker->messageBox("FileTooBigToOpen",
+				pNativeSpeaker->messageBox("FileMemoryAllocationFailed",
 					_pNotepadPlus->_pEditView->getHSelf(),
-					TEXT("File is too big to be opened by Notepad++"),
-					TEXT("Exception: File size problem"),
+					TEXT("There is probably not enough contiguous free memory for the file being loaded by Notepad++."),
+					TEXT("Exception: File memory allocation failed"),
 					MB_OK | MB_APPLMODAL);
 			}
 			[[fallthrough]];
@@ -1692,6 +1780,7 @@ bool FileManager::loadFileData(Document doc, int64_t fileSize, const TCHAR * fil
 
 	_pscratchTilla->execute(SCI_EMPTYUNDOBUFFER);
 	_pscratchTilla->execute(SCI_SETSAVEPOINT);
+	_pscratchTilla->execute(SCI_SETUNDOCOLLECTION, true);
 
 	if (ro)
 		_pscratchTilla->execute(SCI_SETREADONLY, true);
@@ -1706,7 +1795,7 @@ BufferID FileManager::getBufferFromName(const TCHAR* name)
 {
 	for (auto buf : _buffers)
 	{
-		if (OrdinalIgnoreCaseCompareStrings(name, buf->getFullPathName()) == 0)
+		if (wcsicmp(name, buf->getFullPathName()) == 0)
 		{
 			if (!(buf->_referees.empty()) && buf->_referees[0]->isVisible())
 			{

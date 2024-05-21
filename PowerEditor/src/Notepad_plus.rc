@@ -549,6 +549,23 @@ BEGIN
             MENUITEM "Change Search Engine...", IDM_EDIT_CHANGESEARCHENGINE
         END
         MENUITEM SEPARATOR
+        POPUP "Multi-select All"
+        BEGIN
+            MENUITEM "Ignore Case && Whole Word",   IDM_EDIT_MULTISELECTALL
+            MENUITEM "Match Case Only",              IDM_EDIT_MULTISELECTALLMATCHCASE
+            MENUITEM "Match Whole Word Only",        IDM_EDIT_MULTISELECTALLWHOLEWORD
+            MENUITEM "Match Case && Whole Word",    IDM_EDIT_MULTISELECTALLMATCHCASEWHOLEWORD
+        END
+        POPUP "Multi-select Next"
+        BEGIN
+            MENUITEM "Ignore Case && Whole Word",   IDM_EDIT_MULTISELECTNEXT
+            MENUITEM "Match Case Only",              IDM_EDIT_MULTISELECTNEXTMATCHCASE
+            MENUITEM "Match Whole Word Only",        IDM_EDIT_MULTISELECTNEXTWHOLEWORD
+            MENUITEM "Match Case && Whole Word",    IDM_EDIT_MULTISELECTNEXTMATCHCASEWHOLEWORD
+        END
+        MENUITEM "Undo the Latest Added Multi-Select",   IDM_EDIT_MULTISELECTUNDO
+        MENUITEM "Skip Current && Go to Next Multi-select",IDM_EDIT_MULTISELECTSSKIP
+        MENUITEM SEPARATOR
         MENUITEM "Column Mode...",           IDM_EDIT_COLUMNMODETIP
         MENUITEM "Colum&n Editor...",        IDM_EDIT_COLUMNMODE
         MENUITEM "Character &Panel",         IDM_EDIT_CHAR_PANEL
@@ -709,9 +726,13 @@ BEGIN
             MENUITEM "8th Tab",                 IDM_VIEW_TAB8
             MENUITEM "9th Tab",                 IDM_VIEW_TAB9
             MENUITEM SEPARATOR
+            MENUITEM "First Tab",               IDM_VIEW_TAB_START
+            MENUITEM "Last Tab",                IDM_VIEW_TAB_END
             MENUITEM "Next Tab",                IDM_VIEW_TAB_NEXT
             MENUITEM "Previous Tab",            IDM_VIEW_TAB_PREV
             MENUITEM SEPARATOR
+            MENUITEM "Move to Start",           IDM_VIEW_GOTO_START
+            MENUITEM "Move to End",             IDM_VIEW_GOTO_END
             MENUITEM "Move Tab Forward",        IDM_VIEW_TAB_MOVEFORWARD
             MENUITEM "Move Tab Backward",       IDM_VIEW_TAB_MOVEBACKWARD
             MENUITEM SEPARATOR
@@ -934,6 +955,7 @@ BEGIN
         MENUITEM "Fortran (fixed form)",    IDM_LANG_FORTRAN_77
         MENUITEM "Freebasic",               IDM_LANG_FREEBASIC
         MENUITEM "GDScript",                IDM_LANG_GDSCRIPT
+        MENUITEM "Go",                      IDM_LANG_GOLANG
         MENUITEM "Gui4Cli",                 IDM_LANG_GUI4CLI
         MENUITEM "Haskell",                 IDM_LANG_HASKELL
         MENUITEM "Hollywood",               IDM_LANG_HOLLYWOOD
@@ -969,6 +991,7 @@ BEGIN
         MENUITEM "Purebasic",               IDM_LANG_PUREBASIC
         MENUITEM "Python",                  IDM_LANG_PYTHON
         MENUITEM "R",                       IDM_LANG_R
+        MENUITEM "Raku",                    IDM_LANG_RAKU
         MENUITEM "REBOL",                   IDM_LANG_REBOL
         MENUITEM "Registry",                IDM_LANG_REGISTRY
         MENUITEM "Resource file",           IDM_LANG_RC
@@ -1051,6 +1074,7 @@ BEGIN
 	POPUP "G"
 	BEGIN
         MENUITEM "GDScript",                  IDM_LANG_GDSCRIPT
+        MENUITEM "Go",                        IDM_LANG_GOLANG
         MENUITEM "Gui4Cli",                   IDM_LANG_GUI4CLI
 	END
     POPUP "H"
@@ -1113,6 +1137,7 @@ BEGIN
     POPUP "R"
     BEGIN
         MENUITEM "R",                     IDM_LANG_R
+        MENUITEM "Raku",                  IDM_LANG_RAKU
         MENUITEM "REBOL",                 IDM_LANG_REBOL
         MENUITEM "Registry",              IDM_LANG_REGISTRY
         MENUITEM "Resource file",         IDM_LANG_RC
@@ -1165,7 +1190,7 @@ BEGIN
         POPUP "Import"
         BEGIN
             MENUITEM "Import plugin(s)...",         IDM_SETTING_IMPORTPLUGIN
-            MENUITEM "Import style theme(s)...",    IDM_SETTING_IMPORTSTYLETHEMS
+            MENUITEM "Import style theme(s)...",    IDM_SETTING_IMPORTSTYLETHEMES
         END
         MENUITEM SEPARATOR
         MENUITEM "Edit Popup ContextMenu",      IDM_SETTING_EDITCONTEXTMENU
@@ -1294,6 +1319,8 @@ BEGIN
     //LTEXT           "Unhappy Users' Edition",IDC_AUTHOR_NAME,85,38,100,8
     //LTEXT           "Happy Users' Edition",IDC_AUTHOR_NAME,85,38,100,8
     //LTEXT           "I want to get a refund",IDC_HOME_ADDR,85,48,126,8
+    //LTEXT           "20th-Year Anniversary",IDC_AUTHOR_NAME,85,38,100,8
+    //LTEXT           "The short story",IDC_HOME_ADDR,85,48,126,10
     LTEXT           "Home:",IDC_STATIC,21,58,47,8
     LTEXT           "https://notepad-plus-plus.org/",IDC_HOME_ADDR,50,56,126,10
     GROUPBOX        "GNU General Public Licence",IDC_STATIC,20,75,230,138,BS_CENTER
