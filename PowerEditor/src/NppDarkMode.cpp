@@ -503,7 +503,7 @@ namespace NppDarkMode
 		g_advOptions._enableWindowsMode = enable;
 	}
 
-	void setThemeName(const generic_string& newThemeName)
+	void setThemeName(const std::wstring& newThemeName)
 	{
 		if (NppDarkMode::isEnabled())
 			g_advOptions._darkDefaults._xmlFileName = newThemeName;
@@ -511,7 +511,7 @@ namespace NppDarkMode
 			g_advOptions._lightDefaults._xmlFileName = newThemeName;
 	}
 
-	generic_string getThemeName()
+	std::wstring getThemeName()
 	{
 		auto& theme = NppDarkMode::isEnabled() ? g_advOptions._darkDefaults._xmlFileName : g_advOptions._lightDefaults._xmlFileName;
 		return (lstrcmp(theme.c_str(), L"stylers.xml") == 0) ? L"" : theme;
@@ -728,10 +728,35 @@ namespace NppDarkMode
 		getTheme().change(clrs);
 	}
 
-	Colors getDarkModeDefaultColors()
+	Colors getDarkModeDefaultColors(ColorTone colorTone)
 	{
-		return darkColors;
+		switch (colorTone)
+		{
+			case NppDarkMode::ColorTone::redTone:
+				return darkRedColors;
+
+			case NppDarkMode::ColorTone::greenTone:
+				return darkGreenColors;
+
+			case NppDarkMode::ColorTone::blueTone:
+				return darkBlueColors;
+
+			case NppDarkMode::ColorTone::purpleTone:
+				return darkPurpleColors;
+
+			case NppDarkMode::ColorTone::cyanTone:
+				return darkCyanColors;
+
+			case NppDarkMode::ColorTone::oliveTone:
+				return darkOliveColors;
+
+			case NppDarkMode::ColorTone::customizedTone:
+			case NppDarkMode::ColorTone::blackTone:
+			default:
+				return darkColors;
+		}
 	}
+
 
 	void changeCustomTheme(const Colors& colors)
 	{
@@ -1612,7 +1637,7 @@ namespace NppDarkMode
 
 					SetBkMode(hdc, TRANSPARENT);
 
-					TCHAR label[MAX_PATH]{};
+					wchar_t label[MAX_PATH]{};
 					TCITEM tci{};
 					tci.mask = TCIF_TEXT;
 					tci.pszText = label;
@@ -1971,7 +1996,7 @@ namespace NppDarkMode
 						::SetTextColor(hdc, isWindowEnabled ? NppDarkMode::getTextColor() : NppDarkMode::getDisabledTextColor());
 						::SetBkColor(hdc, NppDarkMode::getBackgroundColor());
 						auto bufferLen = static_cast<size_t>(::SendMessage(hWnd, CB_GETLBTEXTLEN, index, 0));
-						TCHAR* buffer = new TCHAR[(bufferLen + 1)];
+						wchar_t* buffer = new wchar_t[(bufferLen + 1)];
 						::SendMessage(hWnd, CB_GETLBTEXT, index, reinterpret_cast<LPARAM>(buffer));
 
 						RECT rcText = rcTextBg;
@@ -2002,7 +2027,7 @@ namespace NppDarkMode
 				::SetTextColor(hdc, isWindowEnabled ? colorEnabledText : NppDarkMode::getDisabledTextColor());
 				::SetBkColor(hdc, isHot ? NppDarkMode::getHotBackgroundColor() : NppDarkMode::getBackgroundColor());
 				::FillRect(hdc, &rcArrow, isHot ? NppDarkMode::getHotBackgroundBrush() : NppDarkMode::getBackgroundBrush());
-				TCHAR arrow[] = L"˅";
+				wchar_t arrow[] = L"˅";
 				::DrawText(hdc, arrow, -1, &rcArrow, DT_NOPREFIX | DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOCLIP);
 				::SetBkColor(hdc, NppDarkMode::getBackgroundColor());
 
@@ -2017,7 +2042,11 @@ namespace NppDarkMode
 				::Polyline(hdc, edge, _countof(edge));
 
 				const int roundCornerValue = NppDarkMode::isWindows11() ? DPIManagerV2::scale(4, dpi) : 0;
-				NppDarkMode::paintRoundFrameRect(hdc, rc, hSelectedPen, roundCornerValue, roundCornerValue);
+
+				::ExcludeClipRect(hdc, cbi.rcItem.left, cbi.rcItem.top, cbi.rcItem.right, cbi.rcItem.bottom);
+				::ExcludeClipRect(hdc, rcArrow.left - 1, rcArrow.top, rcArrow.right, rcArrow.bottom);
+
+				::RoundRect(hdc, rc.left, rc.top, rc.right, rc.bottom, roundCornerValue, roundCornerValue);
 
 				::SelectObject(hdc, holdPen);
 				::SelectObject(hdc, holdBrush);
@@ -2271,7 +2300,7 @@ namespace NppDarkMode
 	bool subclassTabUpDownControl(HWND hwnd)
 	{
 		constexpr size_t classNameLen = 16;
-		TCHAR className[classNameLen]{};
+		wchar_t className[classNameLen]{};
 		GetClassName(hwnd, className, classNameLen);
 		if (wcscmp(className, UPDOWN_CLASS) == 0)
 		{
@@ -2297,7 +2326,7 @@ namespace NppDarkMode
 		EnumChildWindows(hwndParent, [](HWND hwnd, LPARAM lParam) WINAPI_LAMBDA {
 			auto& p = *reinterpret_cast<NppDarkModeParams*>(lParam);
 			constexpr size_t classNameLen = 32;
-			TCHAR className[classNameLen]{};
+			wchar_t className[classNameLen]{};
 			GetClassName(hwnd, className, classNameLen);
 
 			if (wcscmp(className, WC_BUTTON) == 0)
@@ -2576,7 +2605,7 @@ namespace NppDarkMode
 		}
 	}
 
-	LRESULT darkToolBarNotifyCustomDraw(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, bool isPlugin)
+	static LRESULT darkToolBarNotifyCustomDraw(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, bool isPlugin)
 	{
 		auto nmtbcd = reinterpret_cast<LPNMTBCUSTOMDRAW>(lParam);
 		static int roundCornerValue = 0;
@@ -2590,9 +2619,7 @@ namespace NppDarkMode
 				{
 					if (NppDarkMode::isWindows11())
 					{
-						const auto nmhdr = reinterpret_cast<LPNMHDR>(lParam);
-						const auto dpi = DPIManagerV2::getDpiForParent(nmhdr->hwndFrom);
-						roundCornerValue = DPIManagerV2::scale(5, dpi);
+						roundCornerValue = 5;
 					}
 
 					::FillRect(nmtbcd->nmcd.hdc, &nmtbcd->nmcd.rc, NppDarkMode::getDarkerBackgroundBrush());
@@ -2609,7 +2636,9 @@ namespace NppDarkMode
 
 			case CDDS_ITEMPREPAINT:
 			{
+				nmtbcd->hbrMonoDither = NppDarkMode::getBackgroundBrush();
 				nmtbcd->hbrLines = NppDarkMode::getEdgeBrush();
+				nmtbcd->hpenLines = NppDarkMode::getEdgePen();
 				nmtbcd->clrText = NppDarkMode::getTextColor();
 				nmtbcd->clrTextHighlight = NppDarkMode::getTextColor();
 				nmtbcd->clrBtnFace = NppDarkMode::getBackgroundColor();
@@ -2618,7 +2647,17 @@ namespace NppDarkMode
 				nmtbcd->nStringBkMode = TRANSPARENT;
 				nmtbcd->nHLStringBkMode = TRANSPARENT;
 
-				if ((nmtbcd->nmcd.uItemState & CDIS_CHECKED) == CDIS_CHECKED)
+				if ((nmtbcd->nmcd.uItemState & CDIS_HOT) == CDIS_HOT)
+				{
+					auto holdBrush = ::SelectObject(nmtbcd->nmcd.hdc, NppDarkMode::getHotBackgroundBrush());
+					auto holdPen = ::SelectObject(nmtbcd->nmcd.hdc, NppDarkMode::getHotEdgePen());
+					::RoundRect(nmtbcd->nmcd.hdc, nmtbcd->nmcd.rc.left, nmtbcd->nmcd.rc.top, nmtbcd->nmcd.rc.right, nmtbcd->nmcd.rc.bottom, roundCornerValue, roundCornerValue);
+					::SelectObject(nmtbcd->nmcd.hdc, holdBrush);
+					::SelectObject(nmtbcd->nmcd.hdc, holdPen);
+
+					nmtbcd->nmcd.uItemState &= ~(CDIS_CHECKED | CDIS_HOT);
+				}
+				else if ((nmtbcd->nmcd.uItemState & CDIS_CHECKED) == CDIS_CHECKED)
 				{
 					auto holdBrush = ::SelectObject(nmtbcd->nmcd.hdc, NppDarkMode::getSofterBackgroundBrush());
 					auto holdPen = ::SelectObject(nmtbcd->nmcd.hdc, NppDarkMode::getEdgePen());
@@ -2629,7 +2668,12 @@ namespace NppDarkMode
 					nmtbcd->nmcd.uItemState &= ~CDIS_CHECKED;
 				}
 
-				LRESULT lr = TBCDRF_HILITEHOTTRACK | TBCDRF_USECDCOLORS | CDRF_NOTIFYPOSTPAINT;
+				LRESULT lr = TBCDRF_USECDCOLORS;
+				if ((nmtbcd->nmcd.uItemState & CDIS_SELECTED) == CDIS_SELECTED)
+				{
+					lr |= TBCDRF_NOBACKGROUND;
+				}
+
 				if (isPlugin)
 				{
 					lr |= ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
@@ -2638,41 +2682,13 @@ namespace NppDarkMode
 				return lr;
 			}
 
-			case CDDS_ITEMPOSTPAINT:
-			{
-				bool isDropDown = false;
-
-				auto exStyle = ::SendMessage(nmtbcd->nmcd.hdr.hwndFrom, TB_GETEXTENDEDSTYLE, 0, 0);
-				if ((exStyle & TBSTYLE_EX_DRAWDDARROWS) == TBSTYLE_EX_DRAWDDARROWS)
-				{
-					TBBUTTONINFO tbButtonInfo{};
-					tbButtonInfo.cbSize = sizeof(TBBUTTONINFO);
-					tbButtonInfo.dwMask = TBIF_STYLE;
-					::SendMessage(nmtbcd->nmcd.hdr.hwndFrom, TB_GETBUTTONINFO, nmtbcd->nmcd.dwItemSpec, reinterpret_cast<LPARAM>(&tbButtonInfo));
-
-					isDropDown = (tbButtonInfo.fsStyle & BTNS_DROPDOWN) == BTNS_DROPDOWN;
-				}
-
-				if ( !isDropDown && (nmtbcd->nmcd.uItemState & CDIS_HOT) == CDIS_HOT)
-				{
-					NppDarkMode::paintRoundFrameRect(nmtbcd->nmcd.hdc, nmtbcd->nmcd.rc, NppDarkMode::getHotEdgePen(), roundCornerValue, roundCornerValue);
-				}
-
-				if (isPlugin)
-				{
-					break;
-				}
-
-				return CDRF_DODEFAULT;
-			}
-
 			default:
 				break;
 		}
 		return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
 	}
 
-	LRESULT darkListViewNotifyCustomDraw(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, bool isPlugin)
+	static LRESULT darkListViewNotifyCustomDraw(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, bool isPlugin)
 	{
 		auto lplvcd = reinterpret_cast<LPNMLVCUSTOMDRAW>(lParam);
 
@@ -2732,7 +2748,7 @@ namespace NppDarkMode
 		return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
 	}
 
-	LRESULT darkTreeViewNotifyCustomDraw(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, bool isPlugin)
+	static LRESULT darkTreeViewNotifyCustomDraw(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, bool isPlugin)
 	{
 		auto lptvcd = reinterpret_cast<LPNMTVCUSTOMDRAW>(lParam);
 
@@ -2890,7 +2906,7 @@ namespace NppDarkMode
 				if (NppDarkMode::isEnabled())
 				{
 					constexpr size_t classNameLen = 16;
-					TCHAR className[classNameLen]{};
+					wchar_t className[classNameLen]{};
 					auto hwndEdit = reinterpret_cast<HWND>(lParam);
 					GetClassName(hwndEdit, className, classNameLen);
 					if (wcscmp(className, WC_EDIT) == 0)
@@ -2919,7 +2935,7 @@ namespace NppDarkMode
 					case NM_CUSTOMDRAW:
 					{
 						constexpr size_t classNameLen = 16;
-						TCHAR className[classNameLen]{};
+						wchar_t className[classNameLen]{};
 						GetClassName(nmhdr->hwndFrom, className, classNameLen);
 
 						if (wcscmp(className, TOOLBARCLASSNAME) == 0)
@@ -3068,7 +3084,7 @@ namespace NppDarkMode
 				auto nmhdr = reinterpret_cast<LPNMHDR>(lParam);
 
 				constexpr size_t classNameLen = 16;
-				TCHAR className[classNameLen]{};
+				wchar_t className[classNameLen]{};
 				GetClassName(nmhdr->hwndFrom, className, classNameLen);
 
 				switch (nmhdr->code)
@@ -3311,10 +3327,10 @@ namespace NppDarkMode
 		}
 	}
 
-	BOOL CALLBACK enumAutocompleteProc(HWND hwnd, LPARAM /*lParam*/)
+	static BOOL CALLBACK enumAutocompleteProc(HWND hwnd, LPARAM /*lParam*/)
 	{
 		constexpr size_t classNameLen = 16;
-		TCHAR className[classNameLen]{};
+		wchar_t className[classNameLen]{};
 		GetClassName(hwnd, className, classNameLen);
 		if ((wcscmp(className, L"ListBoxX") == 0))
 		{
@@ -3330,7 +3346,7 @@ namespace NppDarkMode
 	// set dark scrollbar for autocomplete list
 	void setDarkAutoCompletion()
 	{
-		::EnumThreadWindows(::GetCurrentThreadId(), (WNDENUMPROC)enumAutocompleteProc, 0);
+		::EnumThreadWindows(::GetCurrentThreadId(), enumAutocompleteProc, 0);
 	}
 
 	LRESULT onCtlColor(HDC hdc)
